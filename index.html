@@ -7,10 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Amiri:wght@400;700&family=Reem+Kufi:wght@400;500;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
-
-<!-- مكتبة Supabase JS SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+<!-- Firebase SDK compat (يعمل بدون ES modules) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --paper:#FBF6EA; --paper-deep:#F3EAD4; --paper-hover:#EDE3CB;
@@ -35,8 +35,10 @@ body{
 }
 ::selection{background:var(--gold-soft);color:var(--teal-deep);}
 
+/* ── Header ── */
 header{
-  position:relative; padding:46px 24px 30px; text-align:center;
+  position:relative; padding:46px 24px 30px;
+  text-align:center;
   background:linear-gradient(155deg,var(--teal-deep) 0%,#1a5e5a 60%,var(--teal-mid) 100%);
   color:var(--paper); overflow:hidden;
 }
@@ -66,6 +68,7 @@ header p.sub{
   color:rgba(251,246,234,.58); margin:0 0 26px; letter-spacing:.04em;
 }
 
+/* ── Tabs ── */
 .tabs{
   position:relative; z-index:3; display:inline-flex; gap:4px;
   background:rgba(0,0,0,.25); padding:5px; border-radius:34px;
@@ -82,6 +85,7 @@ header p.sub{
 .tab-btn:active{transform:scale(.95);}
 .page{display:none;} .page.active{display:block;}
 
+/* ── Controls ── */
 .controls-wrap{max-width:1020px;margin:-26px auto 0;padding:0 18px;position:relative;z-index:3;}
 .controls{
   background:var(--paper); border:1px solid var(--line-soft);
@@ -108,12 +112,25 @@ select{
 }
 select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-pale);}
 
+/* ── Player ── */
 .player{max-width:1020px;margin:14px auto 0;padding:0 18px;}
 .player-inner{
   background:linear-gradient(130deg,var(--teal-deep) 0%,#1a5e5a 55%,var(--teal-mid) 100%);
-  border-radius:var(--r-lg); padding:16px 22px;
+  border-radius:var(--r-lg); padding:18px 22px 16px;
   display:flex; align-items:center; gap:16px; color:var(--paper); flex-wrap:wrap;
   box-shadow:0 10px 30px -10px var(--shadow-deep);
+  position:relative; overflow:hidden;
+}
+.player-inner::before{
+  content:""; position:absolute; bottom:0; left:0; right:0; height:3px;
+  background:rgba(217,182,92,.2); pointer-events:none;
+}
+.player-progress-bar{
+  position:absolute; bottom:0; left:0; height:3px; width:0%;
+  background:linear-gradient(90deg,var(--gold-soft),var(--gold));
+  border-radius:0 3px 0 0;
+  transition:width .4s linear;
+  pointer-events:none;
 }
 .transport{display:flex;gap:8px;align-items:center;}
 .transport button{
@@ -121,29 +138,35 @@ select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--go
   border:1.5px solid rgba(217,182,92,.35); background:transparent;
   color:var(--gold-soft); cursor:pointer;
   display:flex; align-items:center; justify-content:center; font-size:15px;
-  transition:background .18s,transform .1s,border-color .18s;
+  transition:background .18s,transform .12s,border-color .18s;
 }
-.transport button:hover{background:rgba(217,182,92,.12);border-color:var(--gold-soft);}
-.transport button:active{transform:scale(.9);}
+.transport button:hover{background:rgba(217,182,92,.14);border-color:var(--gold-soft);}
+.transport button:active{transform:scale(.88);}
 .transport button.play{
-  width:54px; height:54px; background:var(--gold-soft); color:var(--teal-deep);
-  border:none; font-size:19px; box-shadow:0 4px 16px -4px rgba(217,182,92,.5);
+  width:56px; height:56px; background:var(--gold-soft); color:var(--teal-deep);
+  border:none; font-size:20px; box-shadow:0 4px 18px -4px rgba(217,182,92,.55);
+  transition:background .18s,transform .12s,box-shadow .18s;
 }
-.transport button.play:hover{background:var(--gold);}
+.transport button.play:hover{background:var(--gold);box-shadow:0 6px 22px -4px rgba(217,182,92,.7);}
 .now-playing{flex:1;min-width:140px;}
-.now-playing strong{display:block;font-family:'Amiri',serif;font-size:17px;color:var(--paper);}
-.now-playing span{font-size:12.5px;color:rgba(251,246,234,.58);}
+.now-playing strong{display:block;font-family:'Amiri',serif;font-size:17px;color:var(--paper);line-height:1.3;}
+.now-playing span{font-size:12.5px;color:rgba(251,246,234,.55);margin-top:2px;display:block;}
 .player-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .dl-btn{
   font-family:'Reem Kufi',sans-serif; font-size:12px; color:var(--gold-soft);
   text-decoration:none; border:1.5px solid rgba(217,182,92,.38);
-  padding:8px 14px; border-radius:20px; white-space:nowrap; cursor:pointer;
-  background:transparent;
-  transition:background .18s,border-color .18s;
+  padding:8px 15px; border-radius:20px; white-space:nowrap; cursor:pointer;
+  background:rgba(255,255,255,.04);
+  transition:background .18s,border-color .18s,transform .1s;
 }
-.dl-btn:hover{background:rgba(217,182,92,.12);border-color:var(--gold-soft);}
-.status-msg{font-size:12px;color:var(--gold-soft);}
+.dl-btn:hover{background:rgba(217,182,92,.14);border-color:var(--gold-soft);transform:translateY(-1px);}
+.dl-btn:active{transform:scale(.95);}
+.status-msg{
+  font-size:12px; color:var(--gold-soft);
+  font-family:'Reem Kufi',sans-serif; min-width:80px;
+}
 
+/* ── Mushaf ── */
 main{max-width:940px;margin:28px auto 60px;padding:0 18px;}
 .mushaf{
   background:#fff; border:1px solid var(--line); border-radius:var(--r-sm);
@@ -151,7 +174,8 @@ main{max-width:940px;margin:28px auto 60px;padding:0 18px;}
 }
 .mushaf-inner{
   border:1px solid var(--line-soft); border-radius:4px;
-  padding:44px clamp(18px,5vw,64px) 52px; position:relative;
+  padding:44px clamp(18px,5vw,64px) 52px;
+  position:relative;
   background:linear-gradient(180deg,#fdfaf4 0%,#fff 25%);
 }
 .mushaf-inner::before,.mushaf-inner::after{
@@ -173,17 +197,24 @@ main{max-width:940px;margin:28px auto 60px;padding:0 18px;}
 .ayah-num::before{content:"﴾";} .ayah-num::after{content:"﴿";}
 .loading,.empty-note{text-align:center;padding:50px 10px;color:#9a8f77;font-size:14px;}
 
+/* ── Section cards ── */
 .section-wrap{max-width:1020px;margin:28px auto 60px;padding:0 18px;display:flex;flex-direction:column;gap:28px;}
 .section-card{background:#fff;border:1px solid var(--line-soft);border-radius:var(--r-lg);overflow:hidden;box-shadow:0 4px 18px -8px var(--shadow);}
 .section-head{
   padding:18px 24px; border-bottom:1px solid var(--line-soft);
   display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-  background:linear-gradient(to left,var(--paper),#fff);
+  background:linear-gradient(to left, var(--paper) 0%, rgba(248,244,235,0.5) 100%);
 }
-.section-head h2{font-family:'Amiri Quran',serif;font-weight:400;font-size:21px;color:var(--teal);}
+.section-head h2{font-family:'Amiri Quran',serif;font-weight:400;font-size:21px;color:var(--teal);display:flex;align-items:center;gap:8px;}
+.section-head h2::before{
+  content:""; display:block; width:4px; height:22px;
+  background:linear-gradient(to bottom,var(--gold-soft),var(--gold));
+  border-radius:4px; flex-shrink:0;
+}
 .section-head .desc{font-size:12.5px;color:#9a8f77;margin-top:3px;}
 .section-body{padding:22px 24px;}
 
+/* badge */
 .badge{
   font-family:'Reem Kufi',sans-serif; font-size:11.5px;
   background:var(--gold-pale); color:var(--teal);
@@ -191,22 +222,62 @@ main{max-width:940px;margin:28px auto 60px;padding:0 18px;}
 }
 .badge.green{background:var(--green-pale);color:var(--green);border-color:rgba(26,102,64,.25);}
 
-.resource-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
+/* ── Resource cards ── */
+.resource-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;}
 .resource-card{
   background:var(--paper); border:1px solid var(--line-soft);
-  border-radius:var(--r-md); padding:18px; display:flex; flex-direction:column; gap:10px;
+  border-radius:var(--r-md); overflow:hidden; display:flex; flex-direction:column;
   transition:box-shadow .2s,transform .2s;
 }
 .resource-card:hover{box-shadow:0 8px 24px -8px var(--shadow);transform:translateY(-2px);}
-.resource-card .r-title{font-family:'Amiri',serif;font-weight:700;font-size:16px;color:var(--ink);}
-.resource-card .r-desc{font-size:12.5px;color:#8a7f68;flex:1;line-height:1.72;}
-.resource-card a{
-  align-self:flex-start; font-family:'Reem Kufi',sans-serif; font-size:12px;
-  background:var(--teal); color:var(--paper); text-decoration:none;
-  padding:8px 16px; border-radius:20px; transition:background .18s,transform .1s;
+.r-thumb{
+  width:100%; height:130px; object-fit:cover;
+  background:linear-gradient(135deg,var(--teal-deep),var(--teal-mid));
+  display:flex; align-items:center; justify-content:center;
+  font-size:42px; flex-shrink:0;
 }
-.resource-card a:hover{background:var(--teal-deep);}
+.r-thumb--icon{ background:linear-gradient(135deg,var(--teal-deep),var(--teal-mid)); }
+.r-thumb--user{ background:linear-gradient(135deg,#1a3a2a,#2d5a3d); }
+.r-thumb img{ width:100%; height:100%; object-fit:cover; }
+.r-card-body{ padding:14px; display:flex; flex-direction:column; gap:8px; flex:1; }
+.r-title{font-family:'Amiri',serif;font-weight:700;font-size:15px;color:var(--ink);line-height:1.4;}
+.r-desc{font-size:12px;color:#8a7f68;flex:1;line-height:1.7;}
+.r-meta{
+  display:flex; align-items:center; gap:6px;
+  font-size:11px; color:#9a8f77; font-family:'Reem Kufi',sans-serif;
+}
+.r-meta img{ width:16px; height:16px; border-radius:50%; object-fit:cover; }
+.r-card-foot{ padding:0 14px 14px; display:flex; gap:6px; flex-wrap:wrap; }
+.r-card-foot a, .r-card-foot button{
+  flex:1; text-align:center;
+  font-family:'Reem Kufi',sans-serif; font-size:12px;
+  background:var(--teal); color:var(--paper); text-decoration:none;
+  padding:8px 10px; border-radius:20px; border:none; cursor:pointer;
+  transition:background .18s,transform .1s; white-space:nowrap;
+}
+.r-card-foot a:hover{ background:var(--teal-deep); }
+.r-card-foot .r-del-btn{
+  background:transparent; color:var(--maroon);
+  border:1.5px solid rgba(110,42,42,.3); flex:0;
+  padding:8px 12px;
+}
+.r-card-foot .r-del-btn:hover{ background:var(--maroon-pale); }
+.upload-divider{
+  display:flex; align-items:center; gap:12px;
+  margin:20px 0 16px; font-family:'Reem Kufi',sans-serif;
+  font-size:12px; color:#aaa;
+}
+.upload-divider::before,.upload-divider::after{
+  content:""; flex:1; height:1px; background:var(--line-soft);
+}
+.r-user-badge{
+  font-size:10px; font-family:'Reem Kufi',sans-serif;
+  background:var(--gold-pale); color:var(--gold);
+  padding:2px 7px; border-radius:8px;
+  border:1px solid rgba(180,137,43,.2);
+}
 
+/* ── Download panel (surah + ayah) ── */
 .dl-panel-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;}
 .dl-panel-head strong{font-family:'Amiri',serif;font-size:17px;color:var(--ink);}
 .dl-surah-btn{
@@ -228,9 +299,12 @@ main{max-width:940px;margin:28px auto 60px;padding:0 18px;}
 .dl-surah-btn:active{transform:scale(.96);}
 .dl-surah-btn.loading-zip{opacity:.65;pointer-events:none;}
 
+/* progress bar under download button */
 .dl-progress-wrap{margin-top:10px;display:none;}
 .dl-progress-wrap.show{display:block;}
-.dl-progress-bar{height:4px; border-radius:4px; background:var(--line-soft); overflow:hidden;}
+.dl-progress-bar{
+  height:4px; border-radius:4px; background:var(--line-soft); overflow:hidden;
+}
 .dl-progress-fill{
   height:100%; width:0%; border-radius:4px;
   background:linear-gradient(90deg,var(--teal),var(--gold-soft));
@@ -260,16 +334,17 @@ main{max-width:940px;margin:28px auto 60px;padding:0 18px;}
 .ayah-dl-list a .ic{font-size:11px;opacity:.65;}
 .no-surah-note{text-align:center;color:#9a8f77;font-size:13px;padding:28px;font-family:'Tajawal',sans-serif;}
 
+/* ── Upload & files ── */
 .upload-box{
   border:2px dashed var(--line); border-radius:var(--r-md);
-  padding:34px 18px; text-align:center; background:var(--paper); cursor:pointer;
-  transition:border-color .2s,background .2s,transform .15s;
+  padding:36px 18px; text-align:center; background:var(--paper); cursor:pointer;
+  transition:border-color .2s,background .2s,transform .15s,box-shadow .2s;
 }
-.upload-box:hover,.upload-box.drag{border-color:var(--gold);background:var(--paper-deep);}
-.upload-box.drag{transform:scale(1.01);}
-.upload-box .up-icon{font-size:34px;color:var(--gold);margin-bottom:10px;}
-.upload-box strong{font-family:'Reem Kufi',sans-serif;font-size:14px;color:var(--teal);}
-.upload-box p{margin:6px 0 0;font-size:12.5px;color:#9a8f77;}
+.upload-box:hover{border-color:var(--gold);background:var(--paper-deep);box-shadow:0 4px 16px -6px var(--shadow);}
+.upload-box.drag{border-color:var(--gold);background:var(--paper-deep);transform:scale(1.015);box-shadow:0 8px 24px -8px var(--shadow);}
+.upload-box .up-icon{font-size:36px;color:var(--gold);margin-bottom:12px;display:block;}
+.upload-box strong{font-family:'Reem Kufi',sans-serif;font-size:14.5px;color:var(--teal);}
+.upload-box p{margin:7px 0 0;font-size:12.5px;color:#9a8f77;}
 #fileInput{display:none;}
 .files-list{margin-top:16px;display:flex;flex-direction:column;gap:8px;}
 .file-row{
@@ -305,6 +380,7 @@ main{max-width:940px;margin:28px auto 60px;padding:0 18px;}
   font-family:'Reem Kufi',sans-serif;
 }
 
+/* ── Buttons ── */
 .btn{
   font-family:'Reem Kufi',sans-serif; font-size:13px;
   padding:10px 20px; border-radius:22px; border:none; cursor:pointer;
@@ -319,6 +395,7 @@ main{max-width:940px;margin:28px auto 60px;padding:0 18px;}
 .btn-danger:hover{background:var(--maroon-pale);}
 .btn-sm{padding:7px 14px;font-size:11.5px;}
 
+/* ── Quiz ── */
 .quiz-grid{display:flex;flex-direction:column;gap:14px;}
 .quiz-empty{text-align:center;color:#9a8f77;font-size:13.5px;padding:40px 16px;font-family:'Tajawal',sans-serif;}
 .quiz-card{
@@ -356,6 +433,7 @@ main{max-width:940px;margin:28px auto 60px;padding:0 18px;}
 .quiz-result.fail{background:var(--maroon-pale);color:var(--maroon);}
 .quiz-card-foot{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line-soft);padding-top:12px;}
 
+/* ── Modal ── */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(10,43,41,.58);z-index:100;align-items:center;justify-content:center;padding:16px;}
 .modal-overlay.open{display:flex;}
 .modal{
@@ -401,8 +479,196 @@ main{max-width:940px;margin:28px auto 60px;padding:0 18px;}
 }
 .add-option-btn:hover{border-color:var(--teal);background:var(--teal-light);}
 
+/* ── File Detail Modal ── */
+.fd-file-preview{
+  display:flex; align-items:center; gap:14px;
+  background:var(--paper); border:1px solid var(--line-soft);
+  border-radius:var(--r-md); padding:14px 16px;
+}
+.fd-file-icon{ font-size:32px; flex-shrink:0; }
+.fd-file-name{ font-size:14px; font-weight:700; color:var(--ink); word-break:break-all; }
+.fd-file-size{ font-size:12px; color:#9a8f77; margin-top:3px; font-family:'Reem Kufi',sans-serif; }
+.fd-thumb-area{
+  display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+}
+.fd-thumb-preview{
+  position:relative; width:80px; height:80px; border-radius:var(--r-sm);
+  overflow:hidden; border:1.5px solid var(--line);
+}
+.fd-thumb-preview img{ width:100%; height:100%; object-fit:cover; }
+.fd-thumb-remove{
+  position:absolute; top:3px; right:3px;
+  width:20px; height:20px; border-radius:50%;
+  background:rgba(110,42,42,.8); color:#fff;
+  border:none; cursor:pointer; font-size:10px;
+  display:flex; align-items:center; justify-content:center;
+}
+.fd-thumb-upload{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:6px; width:80px; height:80px; border-radius:var(--r-sm);
+  border:1.5px dashed var(--line); background:var(--paper);
+  cursor:pointer; font-size:11px; color:var(--teal);
+  font-family:'Reem Kufi',sans-serif;
+  transition:border-color .18s,background .18s;
+}
+.fd-thumb-upload:hover{ border-color:var(--gold); background:var(--paper-deep); }
+.fd-thumb-upload span:first-child{ font-size:22px; }
+
+/* ── File row — thumbnail ── */
+.f-thumb{
+  width:48px; height:48px; border-radius:var(--r-sm);
+  object-fit:cover; border:1px solid var(--line-soft); flex-shrink:0;
+}
+.f-thumb-placeholder{
+  width:48px; height:48px; border-radius:var(--r-sm);
+  background:var(--teal-light); color:var(--teal);
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; font-family:'Reem Kufi',sans-serif;
+  font-weight:700; flex-shrink:0; border:1px solid var(--line-soft);
+}
+
+/* ── Footer ── */
 footer{text-align:center;padding:28px 18px 46px;font-size:12px;color:#9a8f77;font-family:'Reem Kufi',sans-serif;letter-spacing:.04em;}
 
+/* ── Auth Bar ── */
+.auth-bar{
+  display:flex; justify-content:center; align-items:center;
+  margin-bottom:22px;
+}
+.auth-signin-btn{
+  display:inline-flex; align-items:center; gap:10px;
+  font-family:'Reem Kufi',sans-serif; font-size:13.5px; font-weight:600;
+  background:rgba(255,255,255,.14); color:var(--paper);
+  border:1.5px solid rgba(255,255,255,.28);
+  padding:11px 22px; border-radius:30px; cursor:pointer;
+  transition:background .2s,border-color .2s,transform .12s;
+  backdrop-filter:blur(4px);
+}
+.auth-signin-btn:hover{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.5);transform:translateY(-1px);}
+.auth-signin-btn:active{transform:scale(.96);}
+.auth-signin-btn svg{flex-shrink:0;}
+.auth-user{
+  display:flex; align-items:center; gap:10px;
+  background:rgba(255,255,255,.12); padding:8px 16px 8px 10px;
+  border-radius:30px; border:1.5px solid rgba(255,255,255,.2);
+  backdrop-filter:blur(4px);
+}
+.auth-avatar{
+  width:34px; height:34px; border-radius:50%;
+  border:2px solid var(--gold-soft); object-fit:cover; flex-shrink:0;
+}
+.auth-name{
+  font-family:'Reem Kufi',sans-serif; font-size:13px;
+  color:var(--paper); max-width:160px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.auth-signout-btn{
+  font-family:'Reem Kufi',sans-serif; font-size:11.5px;
+  background:rgba(110,42,42,.5); color:#ffcdd2; border:none;
+  padding:6px 13px; border-radius:16px; cursor:pointer;
+  transition:background .18s;
+}
+.auth-signout-btn:hover{background:rgba(110,42,42,.75);}
+
+/* ── Auth gate (upload section) ── */
+.auth-gate{
+  text-align:center; padding:32px 16px;
+  background:var(--paper); border:1.5px dashed var(--line);
+  border-radius:var(--r-md); margin-bottom:16px;
+}
+.auth-gate-icon{font-size:32px;margin-bottom:10px;}
+.auth-gate p{font-size:13.5px;color:#8a7f68;margin-bottom:16px;font-family:'Tajawal',sans-serif;}
+.auth-signin-btn--inline{
+  background:var(--teal); color:var(--paper);
+  border-color:transparent;
+}
+.auth-signin-btn--inline:hover{background:var(--teal-deep);border-color:transparent;}
+
+/* ── Upload progress ── */
+.upload-progress-wrap{margin-top:12px;}
+.upload-progress-bar{
+  height:5px; border-radius:5px; background:var(--line-soft); overflow:hidden;
+}
+.upload-progress-fill{
+  height:100%; width:0%; border-radius:5px;
+  background:linear-gradient(90deg,var(--teal),var(--gold-soft));
+  transition:width .25s ease;
+}
+.upload-progress-label{
+  font-family:'Reem Kufi',sans-serif; font-size:12px; color:var(--teal);
+  margin-top:6px; text-align:center;
+}
+
+/* ── File row — uploader info ── */
+.f-uploader{
+  display:flex; align-items:center; gap:6px; margin-top:4px;
+}
+.f-uploader img{
+  width:18px; height:18px; border-radius:50%;
+  border:1px solid var(--line); object-fit:cover;
+}
+.f-uploader-name{font-size:11px;color:#9a8f77;font-family:'Reem Kufi',sans-serif;}
+.f-mine-badge{
+  font-size:10px; font-family:'Reem Kufi',sans-serif;
+  background:var(--gold-pale); color:var(--gold);
+  padding:2px 7px; border-radius:8px;
+  border:1px solid rgba(180,137,43,.2);
+}
+
+/* ── Quiz filter tabs ── */
+.quiz-filter-tabs{
+  display:flex; gap:4px;
+  background:var(--paper-deep); padding:4px; border-radius:20px;
+  border:1px solid var(--line-soft);
+}
+.qf-tab{
+  font-family:'Reem Kufi',sans-serif; font-size:12px;
+  padding:6px 14px; border-radius:16px; border:none;
+  background:transparent; color:var(--ink-soft); cursor:pointer;
+  transition:background .18s,color .18s;
+}
+.qf-tab.active{ background:#fff; color:var(--teal); box-shadow:0 1px 4px rgba(0,0,0,.08); }
+.qf-tab:hover:not(.active){ background:rgba(0,0,0,.04); }
+
+/* ── Visibility toggle ── */
+.visibility-toggle{
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+}
+.vis-btn{
+  font-family:'Reem Kufi',sans-serif; font-size:12.5px;
+  padding:10px 12px; border-radius:var(--r-sm);
+  border:1.5px solid var(--line); background:#fff;
+  color:var(--ink-soft); cursor:pointer; text-align:center;
+  transition:background .18s,border-color .18s,color .18s;
+  line-height:1.5;
+}
+.vis-btn:hover{ border-color:var(--teal); }
+.vis-btn.active{
+  background:var(--teal-light); border-color:var(--teal); color:var(--teal); font-weight:600;
+}
+
+/* ── Quiz card — visibility badge & author ── */
+.quiz-vis-badge{
+  font-family:'Reem Kufi',sans-serif; font-size:10.5px;
+  padding:2px 8px; border-radius:10px; flex-shrink:0;
+}
+.quiz-vis-badge.public{
+  background:rgba(15,61,59,.1); color:var(--teal); border:1px solid rgba(15,61,59,.2);
+}
+.quiz-vis-badge.private{
+  background:var(--gold-pale); color:var(--gold); border:1px solid rgba(180,137,43,.2);
+}
+.quiz-author{
+  display:flex; align-items:center; gap:6px; margin-top:8px;
+  padding-top:8px; border-top:1px solid var(--line-soft);
+}
+.quiz-author img{
+  width:20px; height:20px; border-radius:50%;
+  border:1px solid var(--line); object-fit:cover;
+}
+.quiz-author-name{ font-size:11.5px; color:#9a8f77; font-family:'Reem Kufi',sans-serif; }
+
+/* ── Scrollbar ── */
 ::-webkit-scrollbar{width:6px;height:6px;}
 ::-webkit-scrollbar-track{background:var(--paper-deep);border-radius:6px;}
 ::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px;}
@@ -418,6 +684,24 @@ footer{text-align:center;padding:28px 18px 46px;font-size:12px;color:#9a8f77;fon
   <div class="eyebrow">استماع · تلاوة · مراجعة</div>
   <h1>القرآن الكريم</h1>
   <p class="sub">اختر القارئ والسورة وتابع الآية وهي تُتلى أمامك</p>
+
+  <!-- زر تسجيل الدخول -->
+  <div class="auth-bar" id="authBar">
+    <!-- حالة: غير مسجل -->
+    <button class="auth-signin-btn" id="signInBtn">
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+        <path fill="#FFF" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.9 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
+      </svg>
+      تسجيل الدخول بجوجل
+    </button>
+    <!-- حالة: مسجل -->
+    <div class="auth-user" id="authUser" style="display:none">
+      <img class="auth-avatar" id="authAvatar" src="" alt="صورة المستخدم" width="32" height="32">
+      <span class="auth-name" id="authName"></span>
+      <button class="auth-signout-btn" id="signOutBtn">خروج</button>
+    </div>
+  </div>
+
   <div class="tabs">
     <button class="tab-btn active" data-page="listen">الاستماع</button>
     <button class="tab-btn" data-page="docs">المستندات</button>
@@ -425,8 +709,11 @@ footer{text-align:center;padding:28px 18px 46px;font-size:12px;color:#9a8f77;fon
   </div>
 </header>
 
-<!-- صفحة الاستماع -->
+<!-- ══════════════════════════════
+     صفحة الاستماع
+══════════════════════════════ -->
 <div id="page-listen" class="page active">
+
   <div class="controls-wrap">
     <div class="controls">
       <div class="field">
@@ -453,6 +740,7 @@ footer{text-align:center;padding:28px 18px 46px;font-size:12px;color:#9a8f77;fon
 
   <div class="player">
     <div class="player-inner">
+      <div class="player-progress-bar" id="playerProgressBar"></div>
       <div class="transport">
         <button id="prevBtn" title="الآية السابقة" aria-label="الآية السابقة">❯</button>
         <button id="playBtn" class="play" title="تشغيل" aria-label="تشغيل">▶</button>
@@ -482,37 +770,13 @@ footer{text-align:center;padding:28px 18px 46px;font-size:12px;color:#9a8f77;fon
   </main>
 </div>
 
-<!-- صفحة المستندات -->
+<!-- ══════════════════════════════
+     صفحة المستندات
+══════════════════════════════ -->
 <div id="page-docs" class="page">
   <div class="section-wrap">
-    <div class="section-card">
-      <div class="section-head">
-        <div>
-          <h2>مصادر جاهزة للتحميل</h2>
-          <div class="desc">ملفات ومواقع موثوقة لتحميل المصحف والتفاسير والترجمات</div>
-        </div>
-      </div>
-      <div class="section-body">
-        <div class="resource-grid">
-          <div class="resource-card">
-            <div class="r-title">المصحف الشريف كاملاً (PDF)</div>
-            <div class="r-desc">نسخة كاملة برواية حفص عن عاصم، مصدرها مجمع الملك فهد لطباعة المصحف الشريف — نحو 70 ميجابايت.</div>
-            <a href="https://www.quran-pdf.com/arabic-quran.pdf" target="_blank" rel="noopener">⭳ تنزيل PDF</a>
-          </div>
-          <div class="resource-card">
-            <div class="r-title">نص القرآن بصيغ متعددة</div>
-            <div class="r-desc">نصوص القرآن (عثماني، مبسّط، مع أو بدون تشكيل) بصيغ TXT وXML وJSON من مشروع Tanzil.</div>
-            <a href="https://tanzil.net/download/" target="_blank" rel="noopener">فتح صفحة التحميل</a>
-          </div>
-          <div class="resource-card">
-            <div class="r-title">ترجمات معاني القرآن</div>
-            <div class="r-desc">ترجمات معتمدة لمعاني القرآن بعشرات اللغات، متاحة للتحميل المباشر من مشروع Tanzil.</div>
-            <a href="https://tanzil.net/trans/" target="_blank" rel="noopener">فتح صفحة الترجمات</a>
-          </div>
-        </div>
-      </div>
-    </div>
 
+    <!-- تنزيل السورة الحالية -->
     <div class="section-card">
       <div class="section-head">
         <div>
@@ -532,7 +796,7 @@ footer{text-align:center;padding:28px 18px 46px;font-size:12px;color:#9a8f77;fon
           <div class="dl-progress-bar"><div class="dl-progress-fill" id="dlDocsProgressFill"></div></div>
           <div class="dl-progress-label" id="dlDocsProgressLabel"></div>
         </div>
-        <div id="noSurahNote" class="no-surah-note">لم تُحدَّد سورة بعد — اذهب إلى تبويب الاستماع واختر سورة</div>
+        <div id="noSurahNote" class="no-surah-note">اذهب إلى تبويب الاستماع واختر سورة أولاً</div>
         <div id="ayahDlWrap" style="display:none">
           <div class="dl-divider">أو نزّل آية بعينها</div>
           <div class="ayah-dl-list" id="ayahDlList"></div>
@@ -540,52 +804,134 @@ footer{text-align:center;padding:28px 18px 46px;font-size:12px;color:#9a8f77;fon
       </div>
     </div>
 
-    <!-- قسم ملفاتي المشتركة مع Supabase -->
+    <!-- مصادر + الملفات المرفوعة -->
     <div class="section-card">
       <div class="section-head">
         <div>
-          <h2>ملفاتي المشتركة</h2>
-          <div class="desc">ارفع ملفاتك على السحابة لتظهر فوراً لجميع زوار الموقع</div>
+          <h2>مصادر جاهزة للتحميل</h2>
+          <div class="desc">ملفات ثابتة وملفات رفعها المستخدمون — تظهر لجميع الزوار</div>
         </div>
         <span class="badge green" id="filesCountBadge" style="display:none"></span>
       </div>
       <div class="section-body">
-        <div class="upload-box" id="uploadBox">
-          <div class="up-icon">⭱</div>
-          <strong>اسحب الملفات هنا أو اضغط للاختيار</strong>
-          <p>PDF · MP3 · صور · أو أي مستند آخر</p>
-          <input type="file" id="fileInput" multiple>
+        <div class="resource-grid" id="resourceGrid">
+          <!-- المصادر الثابتة -->
+          <div class="resource-card">
+            <div class="r-thumb r-thumb--icon">📖</div>
+            <div class="r-card-body">
+              <div class="r-title">المصحف الشريف كاملاً (PDF)</div>
+              <div class="r-desc">نسخة كاملة برواية حفص عن عاصم، مصدرها مجمع الملك فهد — نحو 70 ميجابايت.</div>
+            </div>
+            <div class="r-card-foot">
+              <a href="https://www.quran-pdf.com/arabic-quran.pdf" target="_blank" rel="noopener">⭳ تنزيل PDF</a>
+            </div>
+          </div>
+          <div class="resource-card">
+            <div class="r-thumb r-thumb--icon">📝</div>
+            <div class="r-card-body">
+              <div class="r-title">نص القرآن بصيغ متعددة</div>
+              <div class="r-desc">نصوص القرآن (عثماني، مبسّط) بصيغ TXT وXML وJSON من مشروع Tanzil.</div>
+            </div>
+            <div class="r-card-foot">
+              <a href="https://tanzil.net/download/" target="_blank" rel="noopener">فتح صفحة التحميل</a>
+            </div>
+          </div>
+          <div class="resource-card">
+            <div class="r-thumb r-thumb--icon">🌐</div>
+            <div class="r-card-body">
+              <div class="r-title">ترجمات معاني القرآن</div>
+              <div class="r-desc">ترجمات معتمدة لمعاني القرآن بعشرات اللغات من مشروع Tanzil.</div>
+            </div>
+            <div class="r-card-foot">
+              <a href="https://tanzil.net/trans/" target="_blank" rel="noopener">فتح صفحة الترجمات</a>
+            </div>
+          </div>
+          <!-- الملفات المرفوعة تُضاف هنا بالـ JS -->
         </div>
-        <div class="files-list" id="filesList">
-          <div class="files-empty" id="filesEmpty">لا توجد ملفات مرفوعة بعد</div>
+
+        <!-- منطقة الرفع -->
+        <div class="upload-divider">
+          <span>أضف ملفاتك</span>
         </div>
-        <p class="info-note">✓ الملفات مخزّنة سحابياً عبر Supabase وتتحدث تلقائياً لدى كافة الزوار</p>
+
+        <!-- تنبيه تسجيل الدخول -->
+        <div class="auth-gate" id="uploadAuthGate">
+          <div class="auth-gate-icon">🔒</div>
+          <p>سجّل دخولك بحساب جوجل لرفع ملفاتك ومشاركتها مع الجميع</p>
+          <button class="auth-signin-btn auth-signin-btn--inline" id="signInBtn2">
+            <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="currentColor" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.9 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
+            </svg>
+            تسجيل الدخول بجوجل
+          </button>
+        </div>
+
+        <!-- منطقة الرفع (تظهر بعد تسجيل الدخول) -->
+        <div id="uploadSection" style="display:none">
+          <div class="upload-box" id="uploadBox">
+            <div class="up-icon">⭱</div>
+            <strong>اسحب الملفات هنا أو اضغط للاختيار</strong>
+            <p>PDF · MP3 · صور · أو أي مستند آخر (حد أقصى 100 ميجابايت للملف)</p>
+            <input type="file" id="fileInput" multiple>
+          </div>
+          <div class="upload-progress-wrap" id="uploadProgressWrap" style="display:none">
+            <div class="upload-progress-bar"><div class="upload-progress-fill" id="uploadProgressFill"></div></div>
+            <div class="upload-progress-label" id="uploadProgressLabel">جارٍ الرفع…</div>
+          </div>
+        </div>
+
+        <!-- قائمة مخفية (للتوافق) -->
+        <div id="filesList" style="display:none">
+          <div id="filesEmpty"></div>
+        </div>
+        <p class="info-note" id="filesNote" style="display:none">
+          ✓ الملفات مخزّنة على السحابة وتظهر لجميع زوار الصفحة
+        </p>
       </div>
     </div>
+
   </div>
 </div>
 
-<!-- صفحة الاختبارات -->
+<!-- ══════════════════════════════
+     صفحة الاختبارات
+══════════════════════════════ -->
 <div id="page-quiz" class="page">
   <div class="section-wrap">
     <div class="section-card">
       <div class="section-head">
         <div>
           <h2>بنك الاختبارات</h2>
-          <div class="desc">أضف أسئلتك واختبر نفسك أو طلابك في آيات القرآن الكريم</div>
+          <div class="desc">أضف أسئلتك — اختر عام ليظهر للجميع أو خاص لك وحدك</div>
         </div>
-        <button class="btn btn-primary" id="addQuizBtn">+ إضافة سؤال</button>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <div class="quiz-filter-tabs" id="quizFilterTabs">
+            <button class="qf-tab active" data-filter="all">الكل</button>
+            <button class="qf-tab" data-filter="public">عام</button>
+            <button class="qf-tab" data-filter="private">خاص</button>
+          </div>
+          <button class="btn btn-primary" id="addQuizBtn">+ إضافة سؤال</button>
+        </div>
       </div>
       <div class="section-body">
+        <div id="quizAuthGate" class="auth-gate" style="display:none">
+          <div class="auth-gate-icon">🔒</div>
+          <p>سجّل دخولك لإضافة أسئلة ومشاركتها مع الجميع</p>
+        </div>
         <div id="quizList" class="quiz-grid">
-          <div class="quiz-empty" id="quizEmpty">لم تُضَف أسئلة بعد — اضغط «إضافة سؤال» للبدء</div>
+          <div class="quiz-empty" id="quizEmpty">
+            <div style="font-size:28px;margin-bottom:8px">📝</div>
+            لم تُضَف أسئلة بعد
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Modal إضافة سؤال -->
+<!-- ══════════════════════════════
+     Modal إضافة سؤال
+══════════════════════════════ -->
 <div class="modal-overlay" id="quizModal">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal-head">
@@ -610,9 +956,71 @@ footer{text-align:center;padding:28px 18px 46px;font-size:12px;color:#9a8f77;fon
         <label for="qExplain">تفسير / توضيح (اختياري)</label>
         <textarea id="qExplain" placeholder="اشرح الإجابة الصحيحة…" style="min-height:70px;"></textarea>
       </div>
+      <!-- خيار الظهور -->
+      <div class="form-field">
+        <label>ظهور السؤال</label>
+        <div class="visibility-toggle" id="visibilityToggle">
+          <button type="button" class="vis-btn active" data-vis="public">
+            🌐 عام — يظهر لجميع الزوار
+          </button>
+          <button type="button" class="vis-btn" data-vis="private">
+            🔒 خاص — يظهر لك فقط
+          </button>
+        </div>
+      </div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
         <button class="btn btn-danger" id="modalCancelBtn">إلغاء</button>
         <button class="btn btn-primary" id="saveQuizBtn">حفظ السؤال</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     Modal تفاصيل الملف قبل الرفع
+══════════════════════════════ -->
+<div class="modal-overlay" id="fileDetailModal">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>تفاصيل الملف</h3>
+      <button class="modal-close" id="fileDetailClose" aria-label="إغلاق">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- معاينة الملف -->
+      <div class="fd-file-preview" id="fdFilePreview">
+        <div class="fd-file-icon" id="fdFileIcon">📄</div>
+        <div class="fd-file-info">
+          <div class="fd-file-name" id="fdFileName"></div>
+          <div class="fd-file-size" id="fdFileSize"></div>
+        </div>
+      </div>
+
+      <!-- اسم مخصص -->
+      <div class="form-field" style="margin-top:18px;">
+        <label for="fdCustomName">اسم مخصص للملف (اختياري)</label>
+        <input type="text" id="fdCustomName" placeholder="اتركه فارغاً لاستخدام اسم الملف الأصلي">
+      </div>
+
+      <!-- صورة مخصصة -->
+      <div class="form-field">
+        <label>صورة مصغّرة للملف (اختياري)</label>
+        <div class="fd-thumb-area" id="fdThumbArea">
+          <div class="fd-thumb-preview" id="fdThumbPreview" style="display:none">
+            <img id="fdThumbImg" src="" alt="صورة مصغّرة">
+            <button type="button" class="fd-thumb-remove" id="fdThumbRemove">✕</button>
+          </div>
+          <label class="fd-thumb-upload" id="fdThumbUploadLabel" for="fdThumbInput">
+            <span>🖼</span>
+            <span>اختر صورة</span>
+            <input type="file" id="fdThumbInput" accept="image/*" style="display:none">
+          </label>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+        <button class="btn btn-danger" id="fdCancelBtn">إلغاء</button>
+        <button class="btn btn-primary" id="fdUploadBtn">⭱ رفع الملف</button>
       </div>
     </div>
   </div>
@@ -624,17 +1032,54 @@ footer{text-align:center;padding:28px 18px 46px;font-size:12px;color:#9a8f77;fon
 <audio id="audioPlayer" preload="none"></audio>
 
 <script>
-(function(){'use strict';
+/* ══════════════════════════════
+   Firebase init — compat API
+══════════════════════════════ */
+const firebaseConfig = {
+  apiKey:            "AIzaSyB5SOzSxA8Iz1NbbpIoEU7UmtzMm_ZlkvI",
+  authDomain:        "quran-page.firebaseapp.com",
+  projectId:         "quran-page",
+  storageBucket:     "quran-page.firebasestorage.app",
+  messagingSenderId: "419766436381",
+  appId:             "1:419766436381:web:30f6b35ca76304e0bafcf4"
+};
+
+firebase.initializeApp(firebaseConfig);
+const _auth     = firebase.auth();
+const _db       = firebase.firestore();
+const _provider = new firebase.auth.GoogleAuthProvider();
+
+/* compat wrappers عشان الكود الموجود يشتغل بدون تعديل */
+const onAuthStateChanged = (auth, cb) => auth.onAuthStateChanged(cb);
+const signInWithPopup    = (auth, prov) => auth.signInWithPopup(prov);
+const signOut            = (auth) => auth.signOut();
+const collection  = (db, col) => db.collection(col);
+const addDoc      = (ref, data) => ref.add(data);
+const getDocs     = (q) => q.get();
+const deleteDoc   = (ref) => ref.delete();
+const doc         = (db, col, id) => db.collection(col).doc(id);
+const updateDoc   = (ref, data) => ref.update(data);
+const query       = (ref, ...constraints) => {
+  let q = ref;
+  constraints.forEach(c => { q = c(q); });
+  return q;
+};
+const orderBy     = (field, dir='asc') => (ref) => ref.orderBy(field, dir);
+
+/* patch getDocs لإرجاع نفس صيغة modular SDK */
+const _getDocs = async (q) => {
+  const snap = await q.get();
+  snap.docs = snap.docs || snap.docs;
+  return snap;
+};
+
+{
 
 /* ══════════════════════════════
-   تهيئة Supabase
-   استبدل القيم التالية ببيانات مشروعك
+   RECITERS — قائمة موسّعة
 ══════════════════════════════ */
-const SUPABASE_URL = 'https://kpwljblgirnfwinpwkrs.supabase.co/rest/v1/'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtwd2xqYmxnaXJuZndpbnB3a3JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2NDU3MjgsImV4cCI6MjEwMjIyMTcyOH0.uaQSFe6RSNepzVRghzVwh-_1MiFTL-fOXbLReqHw4jo';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
 const RECITERS = [
+  /* السعودية */
   { id:"Alafasy_128kbps",              name:"مشاري راشد العفاسي" },
   { id:"MaherAlMuaiqly128kbps",        name:"ماهر المعيقلي" },
   { id:"Saood_ash-Shuraym_128kbps",    name:"سعود الشريم" },
@@ -644,12 +1089,14 @@ const RECITERS = [
   { id:"Abdurrahmaan_As-Sudais_192kbps",name:"عبدالرحمن السديس" },
   { id:"Nasser_Alqatami_128kbps",      name:"ناصر القطامي" },
   { id:"Khalid_Abduljaleel_128kbps",   name:"خالد عبد الجليل" },
+  /* مصر */
   { id:"Abdul_Basit_Murattal_192kbps", name:"عبد الباسط عبد الصمد (مرتل)" },
   { id:"Abdul_Basit_128kbps",          name:"عبد الباسط عبد الصمد (مجوّد)" },
   { id:"Husary_128kbps",               name:"محمود خليل الحصري" },
   { id:"Minshawy_Murattal_128kbps",    name:"محمد صديق المنشاوي (مرتل)" },
   { id:"Muhammad_Ayyoub_128kbps",      name:"محمد أيوب" },
   { id:"Mohammad_al_Tablaway_128kbps", name:"محمد الطبلاوي" },
+  /* دول أخرى */
   { id:"Abu_Bakr_Ash-Shaatri_128kbps", name:"أبو بكر الشاطري (جزائر)" },
   { id:"Hani_Rifai_192kbps",           name:"هاني الرفاعي" },
   { id:"Ibrahim_Akhdar_32kbps",        name:"إبراهيم الأخضر" },
@@ -659,8 +1106,9 @@ const RECITERS = [
 
 const AUDIO_BASE = "https://everyayah.com/data/";
 const API_BASE   = "https://api.alquran.cloud/v1";
-const QUIZ_KEY   = "quran_quiz_v1";
+const QUIZ_KEY   = "quran_quiz_v1"; /* محتفظ به للتوافق مع الإجابات القديمة */
 
+/* ── DOM refs ── */
 const reciterSelect  = document.getElementById('reciterSelect');
 const surahSelect    = document.getElementById('surahSelect');
 const repeatSelect   = document.getElementById('repeatSelect');
@@ -689,11 +1137,13 @@ let currentIdx   = 0;
 let isPlaying    = false;
 let repeatsDone  = 0;
 
+/* ── Helpers ── */
 const pad3 = n => String(n).padStart(3,'0');
 const setStatus = m => { statusMsg.textContent = m||""; };
 const toArabic = n => String(n).split('').map(d=>('٠١٢٣٤٥٦٧٨٩'[d]??d)).join('');
 const reciterLabel = id => (RECITERS.find(r=>r.id===id)||{name:id}).name;
 
+/* ── Tabs ── */
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -704,12 +1154,14 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   });
 });
 
+/* ── Populate reciters ── */
 RECITERS.forEach(r=>{
   const o=document.createElement('option');
   o.value=r.id; o.textContent=r.name;
   reciterSelect.appendChild(o);
 });
 
+/* ── Load surah list ── */
 async function loadSurahList(){
   try{
     const data = await fetch(`${API_BASE}/surah`).then(r=>r.json());
@@ -778,8 +1230,23 @@ function highlightAyah(idx){
   const a=currentAyahs[idx];
   if(a) npAyah.textContent=`الآية ${toArabic(a.numberInSurah)} من ${toArabic(currentAyahs.length)}`;
   updateDlLink();
+  /* تحديث progress bar */
+  const pBar = document.getElementById('playerProgressBar');
+  if(pBar && currentAyahs.length>1){
+    pBar.style.width = ((idx/(currentAyahs.length-1))*100)+'%';
+  }
 }
-function updateDlLink(){
+
+/* تحريك progress bar أثناء تشغيل الآية */
+(function tickProgress(){
+  requestAnimationFrame(tickProgress);
+  const pBar = document.getElementById('playerProgressBar');
+  if(!pBar || !isPlaying || !audio.duration) return;
+  const ayahFrac = currentAyahs.length>1 ? currentIdx/(currentAyahs.length-1) : 0;
+  const withinFrac = audio.currentTime / audio.duration;
+  const step = 1/Math.max(currentAyahs.length,1);
+  pBar.style.width = ((ayahFrac + withinFrac*step)*100)+'%';
+})();function updateDlLink(){
   if(currentAyahs[currentIdx]){
     dlCurrent.href=audioUrl(currentIdx);
     dlCurrent.setAttribute('download',`${pad3(currentSurahNum)}${pad3(currentAyahs[currentIdx].numberInSurah)}.mp3`);
@@ -826,6 +1293,14 @@ surahSelect.addEventListener('change',e=>loadSurah(e.target.value));
 reciterSelect.addEventListener('change',()=>{updateDlLink();renderAyahDownloads();if(isPlaying)playAyah(currentIdx);});
 repeatSelect.addEventListener('change',()=>{repeatsDone=0;});
 
+/* ══════════════════════════════
+   تحميل السورة كاملة
+   يجمع روابط MP3 في ملف ZIP باستخدام JSZip CDN
+══════════════════════════════ */
+/* ══════════════════════════════
+   دمج الآيات في ملف صوتي واحد عبر Web Audio API
+══════════════════════════════ */
+/* progressWrap/Fill/Label: عناصر progress bar اختيارية (null = لا يوجد) */
 async function downloadSurahMerged(btnEl, progressWrap, progressFill, progressLabel){
   if(!currentAyahs.length){ setStatus("اختر سورة أولاً"); return; }
 
@@ -851,6 +1326,7 @@ async function downloadSurahMerged(btnEl, progressWrap, progressFill, progressLa
     const buffers   = new Array(total).fill(null);
     let done = 0;
 
+    /* تحميل بالتوازي مجموعات 4 */
     const BATCH = 4;
     for(let i=0; i<total; i+=BATCH){
       const slice = currentAyahs.slice(i, i+BATCH);
@@ -873,6 +1349,7 @@ async function downloadSurahMerged(btnEl, progressWrap, progressFill, progressLa
     const channels    = Math.max(...validBufs.map(b=>b.numberOfChannels));
     const totalFrames = buffers.reduce((s,b)=>s+(b?b.length:0), 0);
 
+    /* دمج في OfflineAudioContext */
     const offline = new OfflineAudioContext(channels, totalFrames, sampleRate);
     let offset = 0;
     for(const buf of buffers){
@@ -892,6 +1369,7 @@ async function downloadSurahMerged(btnEl, progressWrap, progressFill, progressLa
     const rendered = await offline.startRendering();
     ctx.close();
 
+    /* تحويل AudioBuffer → WAV */
     if(progressLabel) progressLabel.textContent = 'جارٍ إنشاء الملف…';
     const wav  = audioBufferToWav(rendered);
     const blob = new Blob([wav], {type:'audio/wav'});
@@ -918,6 +1396,7 @@ async function downloadSurahMerged(btnEl, progressWrap, progressFill, progressLa
   }
 }
 
+/* تحويل AudioBuffer إلى WAV بدون مكتبة خارجية */
 function audioBufferToWav(buffer){
   const numCh  = buffer.numberOfChannels;
   const sr     = buffer.sampleRate;
@@ -929,10 +1408,11 @@ function audioBufferToWav(buffer){
   const ab = new ArrayBuffer(44 + dataSize);
   const dv = new DataView(ab);
 
+  /* RIFF header */
   const str = (off,s)=>{ for(let i=0;i<s.length;i++) dv.setUint8(off+i,s.charCodeAt(i)); };
   str(0,'RIFF'); dv.setUint32(4,36+dataSize,true);
   str(8,'WAVE'); str(12,'fmt '); dv.setUint32(16,16,true);
-  dv.setUint16(20,1,true);
+  dv.setUint16(20,1,true);          // PCM
   dv.setUint16(22,numCh,true);
   dv.setUint32(24,sr,true);
   dv.setUint32(28,byteRate,true);
@@ -940,6 +1420,7 @@ function audioBufferToWav(buffer){
   dv.setUint16(34,bitsPS,true);
   str(36,'data'); dv.setUint32(40,dataSize,true);
 
+  /* interleave channels */
   const chData = [];
   for(let c=0;c<numCh;c++) chData.push(buffer.getChannelData(c));
   let off=44;
@@ -955,6 +1436,9 @@ function audioBufferToWav(buffer){
 
 dlSurahBtn.addEventListener('click',()=>downloadSurahMerged(dlSurahBtn, null, null, null));
 
+/* ══════════════════════════════
+   صفحة المستندات — تنزيل
+══════════════════════════════ */
 function renderAyahDownloads(){
   if(!currentAyahs.length){
     saSurahName.textContent="اختر سورة من صفحة الاستماع أولاً";
@@ -989,193 +1473,435 @@ dlSurahDocs.addEventListener('click',()=>{
 });
 
 /* ══════════════════════════════
-   إدارة الملفات عبر Supabase
+   Cloudinary + Firestore — مشاركة الملفات مع الجميع
+   Storage: Cloudinary (مجاني)
+   Metadata: Firestore
 ══════════════════════════════ */
-const uploadBox      = document.getElementById('uploadBox');
-const fileInput      = document.getElementById('fileInput');
-const filesList      = document.getElementById('filesList');
-const filesEmpty     = document.getElementById('filesEmpty');
-const filesCountBadge= document.getElementById('filesCountBadge');
+/* ══════════════════════════════
+   Supabase — رفع الملفات
+══════════════════════════════ */
+const SUPA_URL    = 'https://kpwljblgirnfwinpwkrs.supabase.co';
+const SUPA_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtwd2xqYmxnaXJuZndpbnB3a3JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2NDU3MjgsImV4cCI6MjEwMjIyMTcyOH0.uaQSFe6RSNepzVRghzVwh-_1MiFTL-fOXbLReqHw4jo';
+const SUPA_BUCKET = 'FILES';
 
-let isUploading = false;
-
-// منع تكرار الرفع عند الضغط والسحب
-uploadBox.addEventListener('click', () => fileInput.click());
-uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.classList.add('drag'); });
-uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('drag'));
-uploadBox.addEventListener('drop', e => {
-  e.preventDefault();
-  uploadBox.classList.remove('drag');
-  handleFiles(e.dataTransfer.files);
-});
-
-fileInput.addEventListener('change', () => {
-  if (fileInput.files.length > 0) {
-    handleFiles(fileInput.files);
-  }
-});
-
-async function handleFiles(list) {
-  if (isUploading || !list.length) return;
-  isUploading = true;
-
-  filesEmpty.textContent = "جارٍ رفع الملفات إلى السحابة…";
-
-  for (const file of Array.from(list)) {
-    const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const storagePath = `${Date.now()}_${cleanFileName}`;
-
-    // 1. رفع الملف إلى Storage Bucket
-    const { data: uploadData, error: uploadError } = await supabaseClient.storage
-      .from('FILES')
-      .upload(storagePath, file);
-
-    if (uploadError) {
-      console.error('خطأ أثناء رفع الملف:', uploadError);
-      alert('تعذّر رفع الملف: ' + uploadError.message);
-      continue;
-    }
-
-    // 2. الحصول على رابط الملف المباشر
-    const { data: publicUrlData } = supabaseClient.storage
-      .from('FILES')
-      .getPublicUrl(storagePath);
-
-    // 3. إضافة بيانات الملف إلى جدول FILES
-    const { error: dbError } = await supabaseClient
-      .from('FILES')
-      .insert([{
-        file_name: file.name,
-        file_url: publicUrlData.publicUrl
-      }]);
-
-    if (dbError) {
-      console.error('خطأ أثناء إدراج البيانات:', dbError);
-    }
-  }
-
-  fileInput.value = "";
-  isUploading = false;
-  renderFiles();
-}
-
-const fmtSize = b => !b ? '' : b < 1024 ? b + ' بايت' : b < 1048576 ? (b / 1024).toFixed(1) + ' كيلوبايت' : (b / 1048576).toFixed(2) + ' ميجابايت';
-function iconFor(name) {
-  const ext = name.split('.').pop().toLowerCase();
-  if (ext === 'pdf') return 'PDF';
-  if (['mp3', 'wav', 'ogg'].includes(ext)) return '♪';
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return '🖼';
-  if (['doc', 'docx'].includes(ext)) return 'DOC';
+const fmtSize=b=>b<1024?b+' بايت':b<1048576?(b/1024).toFixed(1)+' كيلوبايت':(b/1048576).toFixed(2)+' ميجابايت';
+function iconFor(type,name){
+  if(type.includes('pdf')||name.toLowerCase().endsWith('.pdf')) return 'PDF';
+  if(type.startsWith('audio')) return '♪';
+  if(type.startsWith('image')) return '🖼';
+  if(type.includes('word')) return 'DOC';
   return '📄';
 }
 
-async function renderFiles() {
-  const { data: records, error } = await supabaseClient
-    .from('FILES')
-    .select('*')
-    .order('created_at', { ascending: false });
+const uploadBox          = document.getElementById('uploadBox');
+const fileInput          = document.getElementById('fileInput');
+const filesList          = document.getElementById('filesList');
+const filesEmpty         = document.getElementById('filesEmpty');
+const filesCountBadge    = document.getElementById('filesCountBadge');
+const uploadSection      = document.getElementById('uploadSection');
+const uploadAuthGate     = document.getElementById('uploadAuthGate');
+const uploadProgressWrap = document.getElementById('uploadProgressWrap');
+const uploadProgressFill = document.getElementById('uploadProgressFill');
+const uploadProgressLabel= document.getElementById('uploadProgressLabel');
+const filesNote          = document.getElementById('filesNote');
+const signInBtn          = document.getElementById('signInBtn');
+const signInBtn2         = document.getElementById('signInBtn2');
+const signOutBtn         = document.getElementById('signOutBtn');
+const authUser           = document.getElementById('authUser');
+const authAvatar         = document.getElementById('authAvatar');
+const authName_el        = document.getElementById('authName');
 
-  filesList.innerHTML = "";
+let currentUser = null;
 
-  if (error || !records || !records.length) {
-    filesList.appendChild(filesEmpty);
-    filesEmpty.textContent = "لا توجد ملفات مرفوعة بعد";
-    filesCountBadge.style.display = "none";
-    return;
+/* ── Auth state ── */
+_auth.onAuthStateChanged(user=>{
+  currentUser = user;
+  if(user){
+    signInBtn.style.display      = 'none';
+    authUser.style.display       = 'flex';
+    authAvatar.src               = user.photoURL || '';
+    authAvatar.alt               = user.displayName || '';
+    authName_el.textContent      = user.displayName || user.email;
+    uploadAuthGate.style.display = 'none';
+    uploadSection.style.display  = 'block';
+    filesNote.style.display      = 'block';
+  } else {
+    signInBtn.style.display      = 'inline-flex';
+    authUser.style.display       = 'none';
+    uploadAuthGate.style.display = 'block';
+    uploadSection.style.display  = 'none';
+    filesNote.style.display      = 'none';
+  }
+  subscribeCloudFiles();   // يبدأ (أو يستمر في) الاستماع اللحظي — لا يفتح أكثر من اشتراك واحد
+  renderCloudFiles();      // يعيد رسم الكروت فورًا بشارة "ملفي" الصحيحة حسب المستخدم الحالي
+});
+
+const doSignIn = ()=> _auth.signInWithPopup(_provider)
+  .catch(e=>alert('تعذّر تسجيل الدخول: '+e.message));
+signInBtn.addEventListener('click',  doSignIn);
+signInBtn2.addEventListener('click', doSignIn);
+signOutBtn.addEventListener('click', ()=> _auth.signOut());
+
+/* ── Upload via Supabase ── */
+uploadBox.addEventListener('click',   ()=> fileInput.click());
+uploadBox.addEventListener('dragover', e=>{ e.preventDefault(); uploadBox.classList.add('drag'); });
+uploadBox.addEventListener('dragleave', ()=> uploadBox.classList.remove('drag'));
+uploadBox.addEventListener('drop',    e=>{ e.preventDefault(); uploadBox.classList.remove('drag'); openFileDetailModal(e.dataTransfer.files); });
+fileInput.addEventListener('change',  ()=> openFileDetailModal(fileInput.files));
+
+/* ── File Detail Modal logic ── */
+const fileDetailModal   = document.getElementById('fileDetailModal');
+const fdFileIcon        = document.getElementById('fdFileIcon');
+const fdFileName        = document.getElementById('fdFileName');
+const fdFileSize        = document.getElementById('fdFileSize');
+const fdCustomName      = document.getElementById('fdCustomName');
+const fdThumbInput      = document.getElementById('fdThumbInput');
+const fdThumbImg        = document.getElementById('fdThumbImg');
+const fdThumbPreview    = document.getElementById('fdThumbPreview');
+const fdThumbUploadLbl  = document.getElementById('fdThumbUploadLabel');
+const fdThumbRemove     = document.getElementById('fdThumbRemove');
+const fdUploadBtn       = document.getElementById('fdUploadBtn');
+const fdCancelBtn       = document.getElementById('fdCancelBtn');
+const fdDetailClose     = document.getElementById('fileDetailClose');
+
+let pendingFiles   = [];
+let pendingFileIdx = 0;
+let thumbDataUrl   = null;
+let thumbFile      = null;
+
+function openFileDetailModal(fileList){
+  pendingFiles   = Array.from(fileList);
+  pendingFileIdx = 0;
+  fileInput.value = '';
+  showFileInModal(0);
+}
+
+function showFileInModal(idx){
+  if(idx >= pendingFiles.length) return;
+  const f = pendingFiles[idx];
+  fdFileIcon.textContent = iconFor(f.type, f.name);
+  fdFileName.textContent = f.name;
+  fdFileSize.textContent = fmtSize(f.size);
+  fdCustomName.value     = '';
+  thumbDataUrl = null; thumbFile = null;
+  fdThumbImg.src = '';
+  fdThumbPreview.style.display  = 'none';
+  fdThumbUploadLbl.style.display= 'flex';
+  fileDetailModal.classList.add('open');
+  fdCustomName.focus();
+}
+
+fdThumbInput.addEventListener('change', ()=>{
+  const f = fdThumbInput.files[0];
+  if(!f) return;
+  thumbFile = f;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    thumbDataUrl           = e.target.result;
+    fdThumbImg.src         = thumbDataUrl;
+    fdThumbPreview.style.display  = 'block';
+    fdThumbUploadLbl.style.display= 'none';
+  };
+  reader.readAsDataURL(f);
+  fdThumbInput.value = '';
+});
+
+fdThumbRemove.addEventListener('click', ()=>{
+  thumbDataUrl = null; thumbFile = null;
+  fdThumbImg.src = '';
+  fdThumbPreview.style.display  = 'none';
+  fdThumbUploadLbl.style.display= 'flex';
+});
+
+const closeFileDetailModal = ()=> fileDetailModal.classList.remove('open');
+fdDetailClose.addEventListener('click',  closeFileDetailModal);
+fdCancelBtn.addEventListener('click',    closeFileDetailModal);
+fileDetailModal.addEventListener('click', e=>{ if(e.target===fileDetailModal) closeFileDetailModal(); });
+
+let isUploadingFile = false; // يمنع الرفع المزدوج عند الضغط أكثر من مرة بسرعة
+fdUploadBtn.addEventListener('click', async()=>{
+  if(isUploadingFile) return;           // ← تجاهل أي ضغطة إضافية أثناء الرفع
+  isUploadingFile = true;
+  fdUploadBtn.disabled = true;
+  fdUploadBtn.style.opacity = '0.6';
+  fdUploadBtn.style.pointerEvents = 'none';
+
+  const file       = pendingFiles[pendingFileIdx];
+  const customName = fdCustomName.value.trim() || file.name;
+  closeFileDetailModal();
+  try{
+    await uploadSingleFile(file, customName, thumbDataUrl);
+  } finally {
+    isUploadingFile = false;
+    fdUploadBtn.disabled = false;
+    fdUploadBtn.style.opacity = '';
+    fdUploadBtn.style.pointerEvents = '';
   }
 
-  filesCountBadge.textContent = `${records.length} ملف`;
-  filesCountBadge.style.display = "inline";
+  pendingFileIdx++;
+  if(pendingFileIdx < pendingFiles.length){
+    setTimeout(()=> showFileInModal(pendingFileIdx), 400);
+  }
+  /* لا داعي لاستدعاء loadCloudFiles() هنا — القائمة تتحدّث تلقائيًا realtime */
+});
 
-  records.forEach(f => {
-    const row = document.createElement('div');
-    row.className = 'file-row';
-    row.innerHTML = `
-      <div class="f-icon">${iconFor(f.file_name)}</div>
-      <div class="f-info">
-        <div class="f-name" title="${f.file_name}">${f.file_name}</div>
-        <div class="f-meta">ملف سحابي</div>
-      </div>
-      <div class="f-actions">
-        <a href="${f.file_url}" target="_blank" download="${f.file_name}">⭳ تنزيل</a>
-        <button type="button" class="btn btn-sm btn-danger remove-btn" data-id="${f.id}" data-url="${f.file_url}">إزالة</button>
-      </div>`;
-    filesList.appendChild(row);
-  });
-
-  filesList.querySelectorAll('.remove-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const fileId = btn.dataset.id;
-      const fileUrl = btn.dataset.url;
-      const storagePath = fileUrl.split('/FILES/').pop();
-
-      // حذف الملف من الـ Storage
-      if (storagePath) {
-        await supabaseClient.storage.from('FILES').remove([storagePath]);
-      }
-      
-      // حذف البيانات من الجدول
-      await supabaseClient.from('FILES').delete().eq('id', fileId);
-      
-      renderFiles();
-    });
+/* تصغير الصورة وتحويلها لـ base64 صغير */
+function resizeImageToBase64(file, maxW, maxH){
+  return new Promise((res,rej)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      URL.revokeObjectURL(url);
+      let w=img.width, h=img.height;
+      if(w>maxW){ h=Math.round(h*maxW/w); w=maxW; }
+      if(h>maxH){ w=Math.round(w*maxH/h); h=maxH; }
+      const canvas = document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      res(canvas.toDataURL('image/jpeg', 0.7));
+    };
+    img.onerror = rej;
+    img.src = url;
   });
 }
 
-// المزامنة اللحظية (Realtime Listener) للتحديث التلقائي
-supabaseClient
-  .channel('public:FILES')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'FILES' }, () => {
-    renderFiles();
-  })
-  .subscribe();
+async function uploadSingleFile(file, displayName, thumbUrl){
+  const MAX = 100 * 1024 * 1024;
+  if(file.size > MAX){ alert(`الملف يتجاوز 100 ميجابايت`); return; }
 
-renderFiles();
+  uploadProgressWrap.style.display = 'block';
+  uploadProgressFill.style.width   = '0%';
+  uploadProgressLabel.textContent  = `جارٍ رفع: ${displayName}`;
+
+  try{
+    /* رفع الملف الأصلي */
+    const safeName  = `${Date.now()}_${file.name.replace(/\s+/g,'_')}`;
+    const uploadUrl = `${SUPA_URL}/storage/v1/object/${SUPA_BUCKET}/${safeName}`;
+
+    await new Promise((res,rej)=>{
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', uploadUrl);
+      xhr.setRequestHeader('Authorization', `Bearer ${SUPA_KEY}`);
+      xhr.setRequestHeader('x-upsert', 'true');
+      xhr.upload.onprogress = e=>{
+        if(e.lengthComputable){
+          const pct = Math.round(e.loaded/e.total*100);
+          uploadProgressFill.style.width  = pct+'%';
+          uploadProgressLabel.textContent = `${displayName} — ${pct}%`;
+        }
+      };
+      xhr.onload = ()=>{ (xhr.status===200||xhr.status===201) ? res() : rej(new Error(`[${xhr.status}] ${xhr.responseText}`)); };
+      xhr.onerror = ()=> rej(new Error('فشل الاتصال'));
+      xhr.send(file);
+    });
+
+    const publicUrl = `${SUPA_URL}/storage/v1/object/public/${SUPA_BUCKET}/${safeName}`;
+
+    /* رفع الصورة المصغّرة — تصغير وتحويل لـ base64 مضغوط */
+    let thumbUrl2 = '';
+    if(thumbFile){
+      try{
+        thumbUrl2 = await resizeImageToBase64(thumbFile, 200, 200);
+      }catch{ thumbUrl2 = ''; }
+    }
+
+    /* حفظ في Firestore — الصورة كـ base64 مضغوط */
+    await _db.collection('sharedFiles').add({
+      name:        displayName,
+      originalName:file.name,
+      size:        file.size,
+      type:        file.type||'application/octet-stream',
+      url:         publicUrl,
+      publicId:    safeName,
+      thumbUrl:    thumbUrl2.length < 900000 ? thumbUrl2 : '',
+      uploadedAt:  Date.now(),
+      uid:         currentUser.uid,
+      userName:    currentUser.displayName||currentUser.email,
+      userPhoto:   currentUser.photoURL||''
+    });
+
+    uploadProgressFill.style.width  = '100%';
+    uploadProgressLabel.textContent = `✓ تم رفع: ${displayName}`;
+    setTimeout(()=>{ uploadProgressWrap.style.display='none'; }, 2000);
+
+  }catch(err){
+    uploadProgressLabel.textContent = `✗ فشل: ${err.message}`;
+    console.error(err);
+    setTimeout(()=>{ uploadProgressWrap.style.display='none'; }, 3000);
+  }
+}
+
+/* ── الاستماع اللحظي (Realtime) لملفات Firestore — يضيفها كـ cards في resource-grid ──
+   onSnapshot يعيد التشغيل تلقائيًا كل مرة يرفع/يحذف فيها أي زائر ملفًا،
+   فتظهر التغييرات للجميع فورًا دون الحاجة لتحديث الصفحة يدويًا. */
+let cloudFilesCache = [];
+let cloudFilesUnsub = null;
+
+function subscribeCloudFiles(){
+  if(cloudFilesUnsub) return; // اشتراك واحد فقط طوال عمر الصفحة
+  cloudFilesUnsub = _db.collection('sharedFiles').orderBy('uploadedAt','desc')
+    .onSnapshot(
+      snap=>{
+        cloudFilesCache = snap.docs.map(d=>({id:d.id,...d.data()}));
+        renderCloudFiles();
+      },
+      err=> console.error('subscribeCloudFiles:', err)
+    );
+}
+
+function renderCloudFiles(){
+  const grid = document.getElementById('resourceGrid');
+  /* احذف الكاردات القديمة للمستخدمين فقط (مش الـ 3 الثابتة) */
+  grid.querySelectorAll('.resource-card.user-card').forEach(c=>c.remove());
+
+  try{
+    const docs = cloudFilesCache;
+
+    const badge = document.getElementById('filesCountBadge');
+    if(docs.length){
+      badge.textContent   = `${docs.length} ملف مرفوع`;
+      badge.style.display = 'inline';
+    } else {
+      badge.style.display = 'none';
+    }
+
+    docs.forEach(f=>{
+      const isMine = currentUser && f.uid === currentUser.uid;
+      const card   = document.createElement('div');
+      card.className = 'resource-card user-card';
+
+      /* صورة مصغّرة أو أيقونة */
+      const thumbHtml = f.thumbUrl
+        ? `<div class="r-thumb"><img src="${f.thumbUrl}" alt="${f.name}" onerror="this.parentElement.innerHTML='${iconFor(f.type||'',f.name)}'"></div>`
+        : `<div class="r-thumb r-thumb--user">${iconFor(f.type||'',f.name)}</div>`;
+
+      card.innerHTML = `
+        ${thumbHtml}
+        <div class="r-card-body">
+          <div class="r-title">${f.name}</div>
+          <div class="r-desc">${fmtSize(f.size)}</div>
+          <div class="r-meta">
+            ${f.userPhoto?`<img src="${f.userPhoto}" alt="${f.userName}" onerror="this.style.display='none'">`:''}
+            <span>${f.userName}</span>
+            ${isMine?'<span class="r-user-badge">ملفي</span>':''}
+          </div>
+        </div>
+        <div class="r-card-foot">
+          <a href="${f.url}" target="_blank" rel="noopener">⭳ فتح / تنزيل</a>
+          ${isMine?`<button type="button" class="r-del-btn" data-id="${f.id}" data-pid="${f.publicId||''}">✕</button>`:''}
+        </div>`;
+
+      grid.appendChild(card);
+    });
+
+    grid.querySelectorAll('.r-del-btn').forEach(btn=>{
+      btn.addEventListener('click', async()=>{
+        if(!confirm('حذف هذا الملف للجميع؟')) return;
+        await deleteCloudFile(btn.dataset.id, btn.dataset.pid);
+        /* لا داعي لاستدعاء أي دالة تحديث هنا — onSnapshot سيلتقط الحذف تلقائيًا */
+      });
+    });
+
+  }catch(err){
+    console.error('renderCloudFiles:', err);
+  }
+}
+
+async function deleteCloudFile(docId, publicId){
+  try{
+    await _db.collection('sharedFiles').doc(docId).delete();
+    /* حذف من Supabase Storage */
+    if(publicId){
+      await fetch(`${SUPA_URL}/storage/v1/object/${SUPA_BUCKET}/${publicId}`,{
+        method:'DELETE',
+        headers:{ 'Authorization':`Bearer ${SUPA_KEY}` }
+      });
+    }
+  }catch(err){ alert('تعذّر الحذف: '+err.message); }
+}
+
+/* الاشتراك اللحظي فوراً لجميع الزوار (حتى قبل تسجيل الدخول) */
+subscribeCloudFiles();
 
 /* ══════════════════════════════
-   نظام الاختبارات
+   نظام الاختبارات — Firestore
+   عام: يظهر للجميع | خاص: للمستخدم فقط
 ══════════════════════════════ */
-let quizData=[];
-try{quizData=JSON.parse(localStorage.getItem(QUIZ_KEY)||'[]');}catch{quizData=[];}
-const saveQuiz=()=>localStorage.setItem(QUIZ_KEY,JSON.stringify(quizData));
+const LOCAL_ANSWERS_KEY = 'quran_quiz_answers_v1'; // الإجابات محلية فقط
+let localAnswers = {};
+try{ localAnswers = JSON.parse(localStorage.getItem(LOCAL_ANSWERS_KEY)||'{}'); }catch{}
+const saveLocalAnswers = ()=> localStorage.setItem(LOCAL_ANSWERS_KEY, JSON.stringify(localAnswers));
 
-const quizList    =document.getElementById('quizList');
-const quizEmpty   =document.getElementById('quizEmpty');
-const addQuizBtn  =document.getElementById('addQuizBtn');
-const quizModal   =document.getElementById('quizModal');
-const modalClose  =document.getElementById('modalClose');
-const modalCancel =document.getElementById('modalCancelBtn');
-const saveQuizBtn =document.getElementById('saveQuizBtn');
-const optionsList =document.getElementById('optionsList');
-const addOptBtn   =document.getElementById('addOptionBtn');
-let editingId=null;
+let quizFilter   = 'all'; // all | public | private
+let quizAllData  = [];    // كل الأسئلة المحملة
 
+const quizList    = document.getElementById('quizList');
+const quizEmpty   = document.getElementById('quizEmpty');
+const quizAuthGate= document.getElementById('quizAuthGate');
+const addQuizBtn  = document.getElementById('addQuizBtn');
+const quizModal   = document.getElementById('quizModal');
+const modalClose  = document.getElementById('modalClose');
+const modalCancel = document.getElementById('modalCancelBtn');
+const saveQuizBtn = document.getElementById('saveQuizBtn');
+const optionsList = document.getElementById('optionsList');
+const addOptBtn   = document.getElementById('addOptionBtn');
+let editingId = null;
+let selectedVis  = 'public';
+
+/* filter tabs */
+document.querySelectorAll('.qf-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.qf-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    quizFilter = tab.dataset.filter;
+    renderQuiz();
+  });
+});
+
+/* open/close modal */
 function openModal(q=null){
-  editingId=q?q.id:null;
-  document.getElementById('modalTitle').textContent=q?'تعديل السؤال':'إضافة سؤال جديد';
-  document.getElementById('qText').value=q?q.question:'';
-  document.getElementById('qCategory').value=q?(q.category||''):'';
-  document.getElementById('qExplain').value=q?(q.explain||''):'';
-  optionsList.innerHTML='';
-  const opts=q?q.options:['','','',''];
-  const corr=q?q.correct:0;
-  opts.forEach((t,i)=>addOptionRow(t,i===corr));
+  editingId   = q ? q.id : null;
+  selectedVis = q ? (q.visibility||'public') : 'public';
+  document.getElementById('modalTitle').textContent = q?'تعديل السؤال':'إضافة سؤال جديد';
+  document.getElementById('qText').value     = q ? q.question    : '';
+  document.getElementById('qCategory').value = q ? (q.category||''):'';
+  document.getElementById('qExplain').value  = q ? (q.explain||'') :'';
+  optionsList.innerHTML = '';
+  const opts = q ? q.options : ['','','',''];
+  const corr = q ? q.correct : 0;
+  opts.forEach((t,i)=>addOptionRow(t, i===corr));
+  /* visibility buttons */
+  document.querySelectorAll('.vis-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.vis===selectedVis);
+  });
   quizModal.classList.add('open');
   document.getElementById('qText').focus();
 }
-const closeModal=()=>quizModal.classList.remove('open');
-addQuizBtn.addEventListener('click',()=>openModal());
-modalClose.addEventListener('click',closeModal);
-modalCancel.addEventListener('click',closeModal);
-quizModal.addEventListener('click',e=>{if(e.target===quizModal)closeModal();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+const closeModal = ()=> quizModal.classList.remove('open');
 
-function addOptionRow(text='',correct=false){
-  const idx=optionsList.children.length;
-  const L=['أ','ب','ج','د','هـ','و'];
-  const div=document.createElement('div');
-  div.className='option-row';
-  div.innerHTML=`
+document.querySelectorAll('.vis-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    selectedVis = b.dataset.vis;
+    document.querySelectorAll('.vis-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+  });
+});
+
+addQuizBtn.addEventListener('click',()=>{
+  if(!currentUser){ alert('سجّل دخولك أولاً لإضافة سؤال'); return; }
+  openModal();
+});
+modalClose.addEventListener('click',  closeModal);
+modalCancel.addEventListener('click', closeModal);
+quizModal.addEventListener('click', e=>{ if(e.target===quizModal) closeModal(); });
+document.addEventListener('keydown',  e=>{ if(e.key==='Escape') closeModal(); });
+
+function addOptionRow(text='', correct=false){
+  const idx = optionsList.children.length;
+  const L   = ['أ','ب','ج','د','هـ','و'];
+  const div = document.createElement('div');
+  div.className = 'option-row';
+  div.innerHTML = `
     <input type="text" value="${text.replace(/"/g,'&quot;')}" placeholder="الخيار ${L[idx]||idx+1}" style="flex:1;">
     <label class="option-correct${correct?' selected':''}">
       <input type="radio" name="correct_opt" value="${idx}" ${correct?'checked':''}>
@@ -1187,99 +1913,169 @@ function addOptionRow(text='',correct=false){
   });
   optionsList.appendChild(div);
 }
-addOptBtn.addEventListener('click',()=>{if(optionsList.children.length<6)addOptionRow();});
+addOptBtn.addEventListener('click',()=>{ if(optionsList.children.length<6) addOptionRow(); });
 
-saveQuizBtn.addEventListener('click',()=>{
-  const qText=document.getElementById('qText').value.trim();
-  if(!qText){document.getElementById('qText').focus();return;}
-  const rows=Array.from(optionsList.children);
-  const options=rows.map(r=>r.querySelector('input[type=text]').value.trim());
-  if(options.filter(Boolean).length<2){alert('أضف خيارين على الأقل');return;}
-  const cr=optionsList.querySelector('input[type=radio]:checked');
-  const correct=cr?Number(cr.value):0;
-  const q={
-    id:editingId||('q'+Date.now()),
-    question:qText,
-    category:document.getElementById('qCategory').value.trim(),
-    options,correct,
-    explain:document.getElementById('qExplain').value.trim(),
-    answered:null
+/* save to Firestore */
+saveQuizBtn.addEventListener('click', async ()=>{
+  const qText = document.getElementById('qText').value.trim();
+  if(!qText){ document.getElementById('qText').focus(); return; }
+  const rows   = Array.from(optionsList.children);
+  const options= rows.map(r=>r.querySelector('input[type=text]').value.trim());
+  if(options.filter(Boolean).length<2){ alert('أضف خيارين على الأقل'); return; }
+  const cr     = optionsList.querySelector('input[type=radio]:checked');
+  const correct= cr ? Number(cr.value) : 0;
+
+  const data = {
+    question:   qText,
+    category:   document.getElementById('qCategory').value.trim(),
+    options, correct,
+    explain:    document.getElementById('qExplain').value.trim(),
+    visibility: selectedVis,           // 'public' | 'private'
+    uid:        currentUser.uid,
+    userName:   currentUser.displayName || currentUser.email,
+    userPhoto:  currentUser.photoURL || '',
+    createdAt:  Date.now()
   };
-  if(editingId){
-    const i=quizData.findIndex(x=>x.id===editingId);
-    if(i>-1){quizData[i]={...q,answered:null};}else quizData.push(q);
-  }else{quizData.push(q);}
-  saveQuiz(); closeModal(); renderQuiz();
+
+  try{
+    saveQuizBtn.textContent = '⏳ جارٍ الحفظ…';
+    saveQuizBtn.disabled    = true;
+    if(editingId){
+      await _db.collection('quizQuestions').doc(editingId).update(data);
+    } else {
+      await _db.collection('quizQuestions').add(data);
+    }
+    closeModal();
+    await loadQuizFromFirestore();
+  }catch(err){
+    alert('تعذّر الحفظ: '+err.message);
+    console.error(err);
+  }finally{
+    saveQuizBtn.textContent = 'حفظ السؤال';
+    saveQuizBtn.disabled    = false;
+  }
 });
 
+/* load from Firestore */
+async function loadQuizFromFirestore(){
+  try{
+    const snap = await _db.collection('quizQuestions').orderBy('createdAt','desc').get();
+    quizAllData = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderQuiz();
+  }catch(err){
+    quizList.innerHTML=`<div class="quiz-empty">تعذّر تحميل الأسئلة — ${err.message}</div>`;
+    console.error(err);
+  }
+}
+
 function renderQuiz(){
-  quizList.innerHTML='';
-  if(!quizData.length){quizList.appendChild(quizEmpty);return;}
-  const L=['أ','ب','ج','د','هـ','و'];
-  quizData.forEach((q,qi)=>{
-    const card=document.createElement('div');
-    card.className='quiz-card';
-    card.innerHTML=`
+  quizList.innerHTML = '';
+
+  /* فلترة: عام للجميع + الخاص للمستخدم الحالي فقط */
+  let visible = quizAllData.filter(q=>{
+    if(q.visibility==='private'){
+      return currentUser && q.uid===currentUser.uid;
+    }
+    return true; // public
+  });
+
+  if(quizFilter==='public')  visible = visible.filter(q=>q.visibility==='public');
+  if(quizFilter==='private') visible = visible.filter(q=>q.visibility==='private');
+
+  if(!visible.length){ quizList.appendChild(quizEmpty); return; }
+
+  const L = ['أ','ب','ج','د','هـ','و'];
+  visible.forEach((q,qi)=>{
+    const isMine   = currentUser && q.uid===currentUser.uid;
+    const answered = localAnswers[q.id] ?? null;
+    const card     = document.createElement('div');
+    card.className = 'quiz-card';
+    card.innerHTML = `
       <div class="quiz-card-head">
-        <div class="quiz-q">${qi+1}. ${q.question}</div>
+        <div style="flex:1">
+          <div class="quiz-q">${qi+1}. ${q.question}</div>
+          <div class="quiz-author">
+            ${q.userPhoto?`<img src="${q.userPhoto}" alt="${q.userName}" onerror="this.style.display='none'">`:''}
+            <span class="quiz-author-name">${q.userName||'مجهول'}</span>
+            <span class="quiz-vis-badge ${q.visibility==='public'?'public':'private'}">
+              ${q.visibility==='public'?'🌐 عام':'🔒 خاص'}
+            </span>
+          </div>
+        </div>
         ${q.category?`<span class="quiz-badge">${q.category}</span>`:''}
       </div>
       <div class="quiz-options" id="qopts-${q.id}"></div>
-      <div class="quiz-result" id="qres-${q.id}"></div>
+      <div class="quiz-result"  id="qres-${q.id}"></div>
       <div class="quiz-card-foot">
         <button class="btn btn-sm btn-gold" data-reset="${q.id}">↺ إعادة</button>
-        <button class="btn btn-sm btn-primary" data-edit="${q.id}">✎ تعديل</button>
-        <button class="btn btn-sm btn-danger" data-del="${q.id}">✕ حذف</button>
+        ${isMine?`<button class="btn btn-sm btn-primary" data-edit="${q.id}">✎ تعديل</button>`:''}
+        ${isMine?`<button class="btn btn-sm btn-danger"  data-del="${q.id}">✕ حذف</button>`:''}
       </div>`;
-    const optsDiv=card.querySelector(`#qopts-${q.id}`);
+
+    const optsDiv = card.querySelector(`#qopts-${q.id}`);
     q.options.forEach((opt,oi)=>{
-      if(!opt)return;
-      const btn=document.createElement('div');
-      btn.className='quiz-opt'; btn.tabIndex=0; btn.setAttribute('role','button');
-      btn.innerHTML=`<span class="opt-letter">${L[oi]||oi+1}</span><span>${opt}</span>`;
-      if(q.answered!==null){
-        if(oi===q.correct)btn.classList.add('correct');
-        else if(oi===q.answered)btn.classList.add('wrong');
+      if(!opt) return;
+      const btn = document.createElement('div');
+      btn.className = 'quiz-opt'; btn.tabIndex=0; btn.setAttribute('role','button');
+      btn.innerHTML = `<span class="opt-letter">${L[oi]||oi+1}</span><span>${opt}</span>`;
+      if(answered!==null){
+        if(oi===q.correct)      btn.classList.add('correct');
+        else if(oi===answered)  btn.classList.add('wrong');
       }
-      btn.addEventListener('click',()=>answerQuiz(q.id,oi));
-      btn.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();answerQuiz(q.id,oi);}});
+      btn.addEventListener('click',  ()=> answerQuiz(q, oi));
+      btn.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); answerQuiz(q,oi); }});
       optsDiv.appendChild(btn);
     });
-    if(q.answered!==null)showResult(q);
+
+    if(answered!==null) showResult(q, answered);
     quizList.appendChild(card);
   });
-  quizList.querySelectorAll('[data-reset]').forEach(b=>b.addEventListener('click',()=>{
-    const q=quizData.find(x=>x.id===b.dataset.reset);
-    if(q){q.answered=null;saveQuiz();renderQuiz();}
-  }));
-  quizList.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>{
-    openModal(quizData.find(x=>x.id===b.dataset.edit));
-  }));
-  quizList.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{
-    if(!confirm('حذف هذا السؤال؟'))return;
-    quizData=quizData.filter(x=>x.id!==b.dataset.del);
-    saveQuiz();renderQuiz();
-  }));
-}
-function answerQuiz(id,chosen){
-  const q=quizData.find(x=>x.id===id);
-  if(!q||q.answered!==null)return;
-  q.answered=chosen; saveQuiz(); renderQuiz();
-}
-function showResult(q){
-  const el=document.getElementById(`qres-${q.id}`);
-  if(!el)return;
-  const ok=q.answered===q.correct;
-  el.classList.add('show',ok?'ok':'fail');
-  el.textContent=ok
-    ?`✓ إجابة صحيحة!${q.explain?' — '+q.explain:''}`
-    :`✗ الصواب: ${q.options[q.correct]}${q.explain?' — '+q.explain:''}`;
-}
-renderQuiz();
 
+  /* إعادة */
+  quizList.querySelectorAll('[data-reset]').forEach(b=> b.addEventListener('click',()=>{
+    delete localAnswers[b.dataset.reset];
+    saveLocalAnswers(); renderQuiz();
+  }));
+  /* تعديل */
+  quizList.querySelectorAll('[data-edit]').forEach(b=> b.addEventListener('click',()=>{
+    openModal(quizAllData.find(x=>x.id===b.dataset.edit));
+  }));
+  /* حذف */
+  quizList.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', async()=>{
+    if(!confirm('حذف هذا السؤال للجميع؟')) return;
+    try{
+      await _db.collection('quizQuestions').doc(b.dataset.del).delete();
+      delete localAnswers[b.dataset.del];
+      saveLocalAnswers();
+      await loadQuizFromFirestore();
+    }catch(err){ alert('تعذّر الحذف: '+err.message); }
+  }));
+}
+
+function answerQuiz(q, chosen){
+  if(localAnswers[q.id]!==undefined) return;
+  localAnswers[q.id] = chosen;
+  saveLocalAnswers();
+  renderQuiz();
+}
+
+function showResult(q, answered){
+  const el = document.getElementById(`qres-${q.id}`);
+  if(!el) return;
+  const ok = answered===q.correct;
+  el.classList.add('show', ok?'ok':'fail');
+  el.textContent = ok
+    ? `✓ إجابة صحيحة!${q.explain?' — '+q.explain:''}`
+    : `✗ الصواب: ${q.options[q.correct]}${q.explain?' — '+q.explain:''}`;
+}
+
+/* تحميل الأسئلة فوراً لجميع الزوار */
+loadQuizFromFirestore();
+
+/* ── Boot ── */
 loadSurahList();
 
-})();
+} // end block
 </script>
 </body>
 </html>
