@@ -1,0 +1,2050 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مصحف الاستماع — القرآن الكريم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Amiri:wght@400;700&family=Reem+Kufi:wght@400;500;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<!-- Firebase SDK compat (يعمل بدون ES modules) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{
+  --paper:#FBF6EA; --paper-deep:#F3EAD4; --paper-hover:#EDE3CB;
+  --ink:#1E1A14; --ink-soft:#4a4438;
+  --teal:#0F3D3B; --teal-mid:#145250; --teal-deep:#0A2B29;
+  --teal-light:rgba(15,61,59,0.08); --teal-glow:rgba(15,61,59,0.18);
+  --gold:#B4892B; --gold-soft:#D9B65C; --gold-pale:rgba(217,182,92,0.18);
+  --green:#1a6640; --green-pale:rgba(26,102,64,0.12);
+  --maroon:#6E2A2A; --maroon-pale:rgba(110,42,42,0.12);
+  --line:#D8C9A3; --line-soft:#E8DFC8;
+  --shadow:rgba(30,26,20,0.12); --shadow-deep:rgba(10,43,41,0.35);
+  --r-lg:16px; --r-md:12px; --r-sm:8px; --r-xs:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:
+    radial-gradient(ellipse 80% 50% at top left,rgba(180,137,43,.07),transparent),
+    radial-gradient(ellipse 80% 50% at bottom right,rgba(15,61,59,.07),transparent),
+    var(--paper);
+  color:var(--ink); font-family:'Tajawal',sans-serif; min-height:100vh; line-height:1.65;
+}
+::selection{background:var(--gold-soft);color:var(--teal-deep);}
+
+/* ── Header ── */
+header{
+  position:relative; padding:46px 24px 30px;
+  text-align:center;
+  background:linear-gradient(155deg,var(--teal-deep) 0%,#1a5e5a 60%,var(--teal-mid) 100%);
+  color:var(--paper); overflow:hidden;
+}
+header::before,header::after{
+  content:""; position:absolute; top:14px; bottom:14px; width:60px;
+  border:1.5px solid rgba(217,182,92,.28); pointer-events:none;
+}
+header::before{right:14px;border-radius:0 60px 60px 0;border-left:none;}
+header::after{left:14px;border-radius:60px 0 0 60px;border-right:none;}
+.hdr-shine{
+  position:absolute; top:-100px; left:50%; transform:translateX(-50%);
+  width:600px; height:260px;
+  background:radial-gradient(ellipse,rgba(217,182,92,.1),transparent 68%);
+  pointer-events:none;
+}
+.eyebrow{
+  font-family:'Reem Kufi',sans-serif; letter-spacing:.42em; font-size:11px;
+  color:var(--gold-soft); text-transform:uppercase; margin-bottom:13px; opacity:.9;
+}
+h1{
+  font-family:'Amiri Quran',serif; font-weight:400;
+  font-size:clamp(30px,5vw,48px); margin:0 0 8px; color:var(--paper);
+  text-shadow:0 2px 20px rgba(0,0,0,.25);
+}
+header p.sub{
+  font-family:'Reem Kufi',sans-serif; font-size:13px;
+  color:rgba(251,246,234,.58); margin:0 0 26px; letter-spacing:.04em;
+}
+
+/* ── Tabs ── */
+.tabs{
+  position:relative; z-index:3; display:inline-flex; gap:4px;
+  background:rgba(0,0,0,.25); padding:5px; border-radius:34px;
+  border:1px solid rgba(217,182,92,.22);
+}
+.tab-btn{
+  font-family:'Reem Kufi',sans-serif; font-size:13px; letter-spacing:.04em;
+  padding:9px 22px; border-radius:28px; border:none; background:transparent;
+  color:rgba(251,246,234,.62); cursor:pointer;
+  transition:background .2s,color .2s,transform .12s;
+}
+.tab-btn.active{background:var(--gold-soft);color:var(--teal-deep);font-weight:700;}
+.tab-btn:hover:not(.active){color:var(--paper);background:rgba(255,255,255,.08);}
+.tab-btn:active{transform:scale(.95);}
+.page{display:none;} .page.active{display:block;}
+
+/* ── Controls ── */
+.controls-wrap{max-width:1020px;margin:-26px auto 0;padding:0 18px;position:relative;z-index:3;}
+.controls{
+  background:var(--paper); border:1px solid var(--line-soft);
+  border-radius:var(--r-lg); padding:22px 24px;
+  box-shadow:0 20px 48px -18px var(--shadow-deep), 0 2px 8px -4px rgba(0,0,0,.06);
+  display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px;
+}
+@media(max-width:740px){.controls{grid-template-columns:1fr 1fr;}}
+@media(max-width:480px){.controls{grid-template-columns:1fr;}}
+.field label{
+  display:flex; align-items:center; gap:5px;
+  font-size:11px; font-family:'Reem Kufi',sans-serif;
+  color:var(--teal); margin-bottom:8px; letter-spacing:.08em; text-transform:uppercase;
+}
+.field-icon{ font-size:13px; opacity:.7; }
+select{
+  width:100%; padding:11px 12px; padding-left:34px;
+  border-radius:var(--r-sm); border:1.5px solid var(--line);
+  background:#fff; color:var(--ink); font-family:'Tajawal',sans-serif; font-size:14.5px;
+  appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9'><path d='M1 1l6 6 6-6' stroke='%230F3D3B' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat:no-repeat; background-position:left 11px center;
+  transition:border-color .18s,box-shadow .18s;
+}
+select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-pale);}
+
+/* ── Player ── */
+.player{max-width:1020px;margin:14px auto 0;padding:0 18px;}
+.player-inner{
+  background:linear-gradient(130deg,var(--teal-deep) 0%,#1a5e5a 55%,var(--teal-mid) 100%);
+  border-radius:var(--r-lg); padding:18px 22px 16px;
+  display:flex; align-items:center; gap:16px; color:var(--paper); flex-wrap:wrap;
+  box-shadow:0 10px 30px -10px var(--shadow-deep);
+  position:relative; overflow:hidden;
+}
+.player-inner::before{
+  content:""; position:absolute; bottom:0; left:0; right:0; height:3px;
+  background:rgba(217,182,92,.2); pointer-events:none;
+}
+.player-progress-bar{
+  position:absolute; bottom:0; left:0; height:3px; width:0%;
+  background:linear-gradient(90deg,var(--gold-soft),var(--gold));
+  border-radius:0 3px 0 0;
+  transition:width .4s linear;
+  pointer-events:none;
+}
+.transport{display:flex;gap:8px;align-items:center;}
+.transport button{
+  width:44px; height:44px; border-radius:50%;
+  border:1.5px solid rgba(217,182,92,.35); background:transparent;
+  color:var(--gold-soft); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-size:15px;
+  transition:background .18s,transform .12s,border-color .18s;
+}
+.transport button:hover{background:rgba(217,182,92,.14);border-color:var(--gold-soft);}
+.transport button:active{transform:scale(.88);}
+.transport button.play{
+  width:56px; height:56px; background:var(--gold-soft); color:var(--teal-deep);
+  border:none; font-size:20px; box-shadow:0 4px 18px -4px rgba(217,182,92,.55);
+  transition:background .18s,transform .12s,box-shadow .18s;
+}
+.transport button.play:hover{background:var(--gold);box-shadow:0 6px 22px -4px rgba(217,182,92,.7);}
+.now-playing{flex:1;min-width:140px;}
+.now-playing strong{display:block;font-family:'Amiri',serif;font-size:17px;color:var(--paper);line-height:1.3;}
+.now-playing span{font-size:12.5px;color:rgba(251,246,234,.55);margin-top:2px;display:block;}
+.player-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.dl-btn{
+  font-family:'Reem Kufi',sans-serif; font-size:12px; color:var(--gold-soft);
+  text-decoration:none; border:1.5px solid rgba(217,182,92,.38);
+  padding:8px 15px; border-radius:20px; white-space:nowrap; cursor:pointer;
+  background:rgba(255,255,255,.04);
+  transition:background .18s,border-color .18s,transform .1s;
+}
+.dl-btn:hover{background:rgba(217,182,92,.14);border-color:var(--gold-soft);transform:translateY(-1px);}
+.dl-btn:active{transform:scale(.95);}
+.status-msg{
+  font-size:12px; color:var(--gold-soft);
+  font-family:'Reem Kufi',sans-serif; min-width:80px;
+}
+
+/* ── Mushaf ── */
+main{max-width:940px;margin:28px auto 60px;padding:0 18px;}
+.mushaf{
+  background:#fff; border:1px solid var(--line); border-radius:var(--r-sm);
+  box-shadow:0 28px 60px -28px rgba(30,26,20,.48); padding:8px;
+}
+.mushaf-inner{
+  border:1px solid var(--line-soft); border-radius:4px;
+  padding:44px clamp(18px,5vw,64px) 52px;
+  position:relative;
+  background:linear-gradient(180deg,#fdfaf4 0%,#fff 25%);
+}
+.mushaf-inner::before,.mushaf-inner::after{
+  content:""; position:absolute; width:28px; height:28px;
+  border:1.5px solid var(--gold); opacity:.5;
+}
+.mushaf-inner::before{top:12px;right:12px;border-left:none;border-bottom:none;}
+.mushaf-inner::after{bottom:12px;left:12px;border-right:none;border-top:none;}
+.surah-title{text-align:center;margin-bottom:28px;}
+.surah-title .name{font-family:'Amiri Quran',serif;font-size:clamp(24px,4vw,34px);color:var(--teal);}
+.surah-title .meta{font-family:'Reem Kufi',sans-serif;font-size:12px;color:var(--maroon);letter-spacing:.1em;margin-top:5px;}
+.bismillah{text-align:center;font-family:'Amiri Quran',serif;font-size:clamp(22px,3.4vw,30px);color:var(--teal);margin-bottom:30px;line-height:2;}
+.quran-text{font-family:'Amiri Quran',serif;font-size:clamp(22px,3.2vw,30px);line-height:2.65;text-align:justify;direction:rtl;}
+.ayah{cursor:pointer;border-radius:var(--r-xs);padding:2px 4px;transition:background .2s,box-shadow .2s;}
+.ayah:hover{background:var(--paper-deep);}
+.ayah:focus{outline:2px solid var(--gold);outline-offset:2px;}
+.ayah.active{background:rgba(180,137,43,.16);box-shadow:0 0 0 1.5px rgba(180,137,43,.35) inset;}
+.ayah-num{font-family:'Reem Kufi',sans-serif;font-size:12.5px;color:var(--gold);display:inline-block;margin:0 4px;vertical-align:middle;}
+.ayah-num::before{content:"﴾";} .ayah-num::after{content:"﴿";}
+.loading,.empty-note{text-align:center;padding:50px 10px;color:#9a8f77;font-size:14px;}
+
+/* ── Section cards ── */
+.section-wrap{max-width:1020px;margin:28px auto 60px;padding:0 18px;display:flex;flex-direction:column;gap:28px;}
+.section-card{background:#fff;border:1px solid var(--line-soft);border-radius:var(--r-lg);overflow:hidden;box-shadow:0 4px 18px -8px var(--shadow);}
+.section-head{
+  padding:18px 24px; border-bottom:1px solid var(--line-soft);
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  background:linear-gradient(to left, var(--paper) 0%, rgba(248,244,235,0.5) 100%);
+}
+.section-head h2{font-family:'Amiri Quran',serif;font-weight:400;font-size:21px;color:var(--teal);display:flex;align-items:center;gap:8px;}
+.section-head h2::before{
+  content:""; display:block; width:4px; height:22px;
+  background:linear-gradient(to bottom,var(--gold-soft),var(--gold));
+  border-radius:4px; flex-shrink:0;
+}
+.section-head .desc{font-size:12.5px;color:#9a8f77;margin-top:3px;}
+.section-body{padding:22px 24px;}
+
+/* badge */
+.badge{
+  font-family:'Reem Kufi',sans-serif; font-size:11.5px;
+  background:var(--gold-pale); color:var(--teal);
+  padding:4px 12px; border-radius:16px; border:1px solid rgba(180,137,43,.25);
+}
+.badge.green{background:var(--green-pale);color:var(--green);border-color:rgba(26,102,64,.25);}
+
+/* ── Resource cards ── */
+.resource-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;}
+.resource-card{
+  background:var(--paper); border:1px solid var(--line-soft);
+  border-radius:var(--r-md); overflow:hidden; display:flex; flex-direction:column;
+  transition:box-shadow .2s,transform .2s;
+}
+.resource-card:hover{box-shadow:0 8px 24px -8px var(--shadow);transform:translateY(-2px);}
+.r-thumb{
+  width:100%; height:130px; object-fit:cover;
+  background:linear-gradient(135deg,var(--teal-deep),var(--teal-mid));
+  display:flex; align-items:center; justify-content:center;
+  font-size:42px; flex-shrink:0;
+}
+.r-thumb--icon{ background:linear-gradient(135deg,var(--teal-deep),var(--teal-mid)); }
+.r-thumb--user{ background:linear-gradient(135deg,#1a3a2a,#2d5a3d); }
+.r-thumb img{ width:100%; height:100%; object-fit:cover; }
+.r-card-body{ padding:14px; display:flex; flex-direction:column; gap:8px; flex:1; }
+.r-title{font-family:'Amiri',serif;font-weight:700;font-size:15px;color:var(--ink);line-height:1.4;}
+.r-desc{font-size:12px;color:#8a7f68;flex:1;line-height:1.7;}
+.r-meta{
+  display:flex; align-items:center; gap:6px;
+  font-size:11px; color:#9a8f77; font-family:'Reem Kufi',sans-serif;
+}
+.r-meta img{ width:16px; height:16px; border-radius:50%; object-fit:cover; }
+.r-card-foot{ padding:0 14px 14px; display:flex; gap:6px; flex-wrap:wrap; }
+.r-card-foot a, .r-card-foot button{
+  flex:1; text-align:center;
+  font-family:'Reem Kufi',sans-serif; font-size:12px;
+  background:var(--teal); color:var(--paper); text-decoration:none;
+  padding:8px 10px; border-radius:20px; border:none; cursor:pointer;
+  transition:background .18s,transform .1s; white-space:nowrap;
+}
+.r-card-foot a:hover{ background:var(--teal-deep); }
+.r-card-foot .r-del-btn{
+  background:transparent; color:var(--maroon);
+  border:1.5px solid rgba(110,42,42,.3); flex:0;
+  padding:8px 12px;
+}
+.r-card-foot .r-del-btn:hover{ background:var(--maroon-pale); }
+.upload-divider{
+  display:flex; align-items:center; gap:12px;
+  margin:20px 0 16px; font-family:'Reem Kufi',sans-serif;
+  font-size:12px; color:#aaa;
+}
+.upload-divider::before,.upload-divider::after{
+  content:""; flex:1; height:1px; background:var(--line-soft);
+}
+.r-user-badge{
+  font-size:10px; font-family:'Reem Kufi',sans-serif;
+  background:var(--gold-pale); color:var(--gold);
+  padding:2px 7px; border-radius:8px;
+  border:1px solid rgba(180,137,43,.2);
+}
+
+/* ── Download panel (surah + ayah) ── */
+.dl-panel-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;}
+.dl-panel-head strong{font-family:'Amiri',serif;font-size:17px;color:var(--ink);}
+.dl-surah-btn{
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:'Reem Kufi',sans-serif; font-size:13px;
+  background:linear-gradient(135deg,var(--teal) 0%,var(--teal-mid) 100%);
+  color:var(--paper);
+  padding:11px 22px; border-radius:24px; text-decoration:none; border:none; cursor:pointer;
+  transition:opacity .18s,transform .1s,box-shadow .18s;
+  box-shadow:0 6px 18px -6px var(--shadow-deep);
+  position:relative; overflow:hidden;
+}
+.dl-surah-btn::before{
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.12),transparent);
+  pointer-events:none;
+}
+.dl-surah-btn:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 8px 22px -6px var(--shadow-deep);}
+.dl-surah-btn:active{transform:scale(.96);}
+.dl-surah-btn.loading-zip{opacity:.65;pointer-events:none;}
+
+/* progress bar under download button */
+.dl-progress-wrap{margin-top:10px;display:none;}
+.dl-progress-wrap.show{display:block;}
+.dl-progress-bar{
+  height:4px; border-radius:4px; background:var(--line-soft); overflow:hidden;
+}
+.dl-progress-fill{
+  height:100%; width:0%; border-radius:4px;
+  background:linear-gradient(90deg,var(--teal),var(--gold-soft));
+  transition:width .3s ease;
+}
+.dl-progress-label{
+  font-family:'Reem Kufi',sans-serif; font-size:11px; color:var(--teal);
+  margin-top:5px; text-align:center;
+}
+
+.dl-divider{
+  display:flex; align-items:center; gap:10px; margin:16px 0;
+  font-family:'Reem Kufi',sans-serif; font-size:11.5px; color:#bbb;
+}
+.dl-divider::before,.dl-divider::after{content:"";flex:1;height:1px;background:var(--line-soft);}
+.ayah-dl-list{
+  max-height:280px; overflow-y:auto;
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(152px,1fr)); gap:6px;
+}
+.ayah-dl-list a{
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:12.5px; color:var(--teal); text-decoration:none;
+  padding:8px 12px; border-radius:var(--r-sm); background:var(--paper-deep);
+  transition:background .15s,color .15s,transform .1s;
+}
+.ayah-dl-list a:hover{background:var(--gold-soft);color:var(--teal-deep);transform:translateY(-1px);}
+.ayah-dl-list a .ic{font-size:11px;opacity:.65;}
+.no-surah-note{text-align:center;color:#9a8f77;font-size:13px;padding:28px;font-family:'Tajawal',sans-serif;}
+
+/* ── Upload & files ── */
+.upload-box{
+  border:2px dashed var(--line); border-radius:var(--r-md);
+  padding:36px 18px; text-align:center; background:var(--paper); cursor:pointer;
+  transition:border-color .2s,background .2s,transform .15s,box-shadow .2s;
+}
+.upload-box:hover{border-color:var(--gold);background:var(--paper-deep);box-shadow:0 4px 16px -6px var(--shadow);}
+.upload-box.drag{border-color:var(--gold);background:var(--paper-deep);transform:scale(1.015);box-shadow:0 8px 24px -8px var(--shadow);}
+.upload-box .up-icon{font-size:36px;color:var(--gold);margin-bottom:12px;display:block;}
+.upload-box strong{font-family:'Reem Kufi',sans-serif;font-size:14.5px;color:var(--teal);}
+.upload-box p{margin:7px 0 0;font-size:12.5px;color:#9a8f77;}
+#fileInput{display:none;}
+.files-list{margin-top:16px;display:flex;flex-direction:column;gap:8px;}
+.file-row{
+  display:flex; align-items:center; gap:12px;
+  background:var(--paper); border:1px solid var(--line-soft);
+  border-radius:var(--r-md); padding:12px 16px;
+  transition:box-shadow .18s,border-color .18s;
+}
+.file-row:hover{box-shadow:0 4px 14px -6px var(--shadow);border-color:var(--line);}
+.f-icon{
+  width:40px; height:40px; border-radius:var(--r-sm);
+  background:var(--teal-light); color:var(--teal);
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-family:'Reem Kufi',sans-serif; font-weight:700; flex-shrink:0;
+}
+.f-info{flex:1;min-width:0;}
+.f-name{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.f-meta{font-size:11px;color:#9a8f77;margin-top:2px;}
+.f-actions{display:flex;gap:6px;}
+.f-actions a,.f-actions button{
+  font-family:'Reem Kufi',sans-serif; font-size:11.5px; border-radius:16px;
+  padding:6px 13px; text-decoration:none; border:1.5px solid var(--line);
+  background:transparent; color:var(--teal); cursor:pointer;
+  transition:background .15s,border-color .15s;
+}
+.f-actions a:hover,.f-actions button:hover{background:var(--paper-deep);}
+.remove-btn{color:var(--maroon)!important;border-color:rgba(110,42,42,.3)!important;}
+.files-empty{text-align:center;color:#9a8f77;font-size:13px;padding:24px;font-family:'Tajawal',sans-serif;}
+.info-note{
+  font-size:11.5px; color:var(--teal); background:var(--teal-light);
+  border:1px solid rgba(15,61,59,.15); border-radius:var(--r-sm);
+  padding:10px 14px; margin-top:12px; text-align:center;
+  font-family:'Reem Kufi',sans-serif;
+}
+
+/* ── Buttons ── */
+.btn{
+  font-family:'Reem Kufi',sans-serif; font-size:13px;
+  padding:10px 20px; border-radius:22px; border:none; cursor:pointer;
+  transition:background .18s,transform .1s,box-shadow .18s;
+}
+.btn:active{transform:scale(.96);}
+.btn-primary{background:var(--teal);color:var(--paper);}
+.btn-primary:hover{background:var(--teal-deep);box-shadow:0 4px 12px -4px rgba(15,61,59,.4);}
+.btn-gold{background:var(--gold-soft);color:var(--teal-deep);}
+.btn-gold:hover{background:var(--gold);}
+.btn-danger{background:transparent;color:var(--maroon);border:1.5px solid rgba(110,42,42,.35);}
+.btn-danger:hover{background:var(--maroon-pale);}
+.btn-sm{padding:7px 14px;font-size:11.5px;}
+
+/* ── Quiz ── */
+.quiz-grid{display:flex;flex-direction:column;gap:14px;}
+.quiz-empty{text-align:center;color:#9a8f77;font-size:13.5px;padding:40px 16px;font-family:'Tajawal',sans-serif;}
+.quiz-card{
+  background:var(--paper); border:1px solid var(--line-soft);
+  border-radius:var(--r-md); padding:20px; transition:box-shadow .18s;
+}
+.quiz-card:hover{box-shadow:0 6px 22px -8px var(--shadow);}
+.quiz-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;}
+.quiz-q{font-family:'Amiri',serif;font-size:17px;color:var(--ink);flex:1;line-height:1.7;}
+.quiz-badge{
+  font-family:'Reem Kufi',sans-serif;font-size:11px;
+  padding:3px 10px;border-radius:12px;
+  background:var(--gold-pale);color:var(--teal);border:1px solid rgba(180,137,43,.2);
+  white-space:nowrap;flex-shrink:0;
+}
+.quiz-options{display:flex;flex-direction:column;gap:7px;}
+.quiz-opt{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px; border-radius:var(--r-sm);
+  border:1.5px solid var(--line-soft); background:#fff;
+  font-family:'Tajawal',sans-serif; font-size:14px; cursor:pointer;
+  transition:background .15s,border-color .15s;
+}
+.quiz-opt:hover{background:var(--paper-deep);border-color:var(--line);}
+.quiz-opt.correct{background:rgba(15,61,59,.1);border-color:var(--teal);color:var(--teal);}
+.quiz-opt.wrong{background:var(--maroon-pale);border-color:rgba(110,42,42,.4);color:var(--maroon);}
+.quiz-opt .opt-letter{
+  width:26px;height:26px;border-radius:50%;background:var(--paper-deep);
+  color:var(--teal);font-family:'Reem Kufi',sans-serif;font-size:12px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;
+}
+.quiz-result{margin-top:10px;font-family:'Reem Kufi',sans-serif;font-size:12.5px;padding:9px 13px;border-radius:var(--r-sm);display:none;}
+.quiz-result.show{display:block;}
+.quiz-result.ok{background:rgba(15,61,59,.1);color:var(--teal);}
+.quiz-result.fail{background:var(--maroon-pale);color:var(--maroon);}
+.quiz-card-foot{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line-soft);padding-top:12px;}
+
+/* ── Modal ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(10,43,41,.58);z-index:100;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:var(--paper); border-radius:var(--r-lg);
+  width:100%; max-width:540px; max-height:90vh; overflow-y:auto;
+  box-shadow:0 28px 70px -16px rgba(10,43,41,.55);
+  animation:slideUp .22s ease;
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(22px);}to{opacity:1;transform:translateY(0);}}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between;}
+.modal-head h3{font-family:'Amiri Quran',serif;font-weight:400;font-size:20px;color:var(--teal);}
+.modal-close{background:none;border:none;font-size:20px;color:#9a8f77;cursor:pointer;line-height:1;padding:4px;}
+.modal-close:hover{color:var(--ink);}
+.modal-body{padding:22px;}
+.form-field{margin-bottom:16px;}
+.form-field label{display:block;font-family:'Reem Kufi',sans-serif;font-size:12px;color:var(--teal);letter-spacing:.05em;margin-bottom:7px;text-transform:uppercase;}
+.form-field input,.form-field textarea,.form-field select{
+  width:100%;padding:11px 14px;border-radius:var(--r-sm);border:1.5px solid var(--line);
+  background:#fff;font-family:'Tajawal',sans-serif;font-size:14.5px;color:var(--ink);
+  transition:border-color .18s,box-shadow .18s;
+}
+.form-field textarea{min-height:90px;resize:vertical;}
+.form-field input:focus,.form-field textarea:focus,.form-field select:focus{
+  outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-pale);
+}
+.options-list{display:flex;flex-direction:column;gap:8px;margin-bottom:8px;}
+.option-row{display:flex;gap:8px;align-items:center;}
+.option-row input[type=text]{flex:1;}
+.option-correct{
+  display:flex;align-items:center;gap:6px;
+  font-family:'Reem Kufi',sans-serif;font-size:12px;
+  color:var(--teal);cursor:pointer;padding:6px 10px;
+  border:1.5px solid var(--line);border-radius:var(--r-sm);background:#fff;
+  transition:background .15s,border-color .15s;white-space:nowrap;
+}
+.option-correct.selected{background:rgba(15,61,59,.08);border-color:var(--teal);}
+.option-correct input[type=radio]{accent-color:var(--teal);}
+.add-option-btn{
+  font-family:'Reem Kufi',sans-serif;font-size:12px;
+  background:none;border:1.5px dashed var(--line);border-radius:var(--r-sm);
+  padding:8px;width:100%;cursor:pointer;color:var(--teal);
+  transition:border-color .15s,background .15s;
+}
+.add-option-btn:hover{border-color:var(--teal);background:var(--teal-light);}
+
+/* ── File Detail Modal ── */
+.fd-file-preview{
+  display:flex; align-items:center; gap:14px;
+  background:var(--paper); border:1px solid var(--line-soft);
+  border-radius:var(--r-md); padding:14px 16px;
+}
+.fd-file-icon{ font-size:32px; flex-shrink:0; }
+.fd-file-name{ font-size:14px; font-weight:700; color:var(--ink); word-break:break-all; }
+.fd-file-size{ font-size:12px; color:#9a8f77; margin-top:3px; font-family:'Reem Kufi',sans-serif; }
+.fd-thumb-area{
+  display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+}
+.fd-thumb-preview{
+  position:relative; width:80px; height:80px; border-radius:var(--r-sm);
+  overflow:hidden; border:1.5px solid var(--line);
+}
+.fd-thumb-preview img{ width:100%; height:100%; object-fit:cover; }
+.fd-thumb-remove{
+  position:absolute; top:3px; right:3px;
+  width:20px; height:20px; border-radius:50%;
+  background:rgba(110,42,42,.8); color:#fff;
+  border:none; cursor:pointer; font-size:10px;
+  display:flex; align-items:center; justify-content:center;
+}
+.fd-thumb-upload{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:6px; width:80px; height:80px; border-radius:var(--r-sm);
+  border:1.5px dashed var(--line); background:var(--paper);
+  cursor:pointer; font-size:11px; color:var(--teal);
+  font-family:'Reem Kufi',sans-serif;
+  transition:border-color .18s,background .18s;
+}
+.fd-thumb-upload:hover{ border-color:var(--gold); background:var(--paper-deep); }
+.fd-thumb-upload span:first-child{ font-size:22px; }
+
+/* ── File row — thumbnail ── */
+.f-thumb{
+  width:48px; height:48px; border-radius:var(--r-sm);
+  object-fit:cover; border:1px solid var(--line-soft); flex-shrink:0;
+}
+.f-thumb-placeholder{
+  width:48px; height:48px; border-radius:var(--r-sm);
+  background:var(--teal-light); color:var(--teal);
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; font-family:'Reem Kufi',sans-serif;
+  font-weight:700; flex-shrink:0; border:1px solid var(--line-soft);
+}
+
+/* ── Footer ── */
+footer{text-align:center;padding:28px 18px 46px;font-size:12px;color:#9a8f77;font-family:'Reem Kufi',sans-serif;letter-spacing:.04em;}
+
+/* ── Auth Bar ── */
+.auth-bar{
+  display:flex; justify-content:center; align-items:center;
+  margin-bottom:22px;
+}
+.auth-signin-btn{
+  display:inline-flex; align-items:center; gap:10px;
+  font-family:'Reem Kufi',sans-serif; font-size:13.5px; font-weight:600;
+  background:rgba(255,255,255,.14); color:var(--paper);
+  border:1.5px solid rgba(255,255,255,.28);
+  padding:11px 22px; border-radius:30px; cursor:pointer;
+  transition:background .2s,border-color .2s,transform .12s;
+  backdrop-filter:blur(4px);
+}
+.auth-signin-btn:hover{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.5);transform:translateY(-1px);}
+.auth-signin-btn:active{transform:scale(.96);}
+.auth-signin-btn svg{flex-shrink:0;}
+.auth-user{
+  display:flex; align-items:center; gap:10px;
+  background:rgba(255,255,255,.12); padding:8px 16px 8px 10px;
+  border-radius:30px; border:1.5px solid rgba(255,255,255,.2);
+  backdrop-filter:blur(4px);
+}
+.auth-avatar{
+  width:34px; height:34px; border-radius:50%;
+  border:2px solid var(--gold-soft); object-fit:cover; flex-shrink:0;
+}
+.auth-name{
+  font-family:'Reem Kufi',sans-serif; font-size:13px;
+  color:var(--paper); max-width:160px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.auth-signout-btn{
+  font-family:'Reem Kufi',sans-serif; font-size:11.5px;
+  background:rgba(110,42,42,.5); color:#ffcdd2; border:none;
+  padding:6px 13px; border-radius:16px; cursor:pointer;
+  transition:background .18s;
+}
+.auth-signout-btn:hover{background:rgba(110,42,42,.75);}
+
+/* ── Auth gate (upload section) ── */
+.auth-gate{
+  text-align:center; padding:32px 16px;
+  background:var(--paper); border:1.5px dashed var(--line);
+  border-radius:var(--r-md); margin-bottom:16px;
+}
+.auth-gate-icon{font-size:32px;margin-bottom:10px;}
+.auth-gate p{font-size:13.5px;color:#8a7f68;margin-bottom:16px;font-family:'Tajawal',sans-serif;}
+.auth-signin-btn--inline{
+  background:var(--teal); color:var(--paper);
+  border-color:transparent;
+}
+.auth-signin-btn--inline:hover{background:var(--teal-deep);border-color:transparent;}
+
+/* ── Upload progress ── */
+.upload-progress-wrap{margin-top:12px;}
+.upload-progress-bar{
+  height:5px; border-radius:5px; background:var(--line-soft); overflow:hidden;
+}
+.upload-progress-fill{
+  height:100%; width:0%; border-radius:5px;
+  background:linear-gradient(90deg,var(--teal),var(--gold-soft));
+  transition:width .25s ease;
+}
+.upload-progress-label{
+  font-family:'Reem Kufi',sans-serif; font-size:12px; color:var(--teal);
+  margin-top:6px; text-align:center;
+}
+
+/* ── File row — uploader info ── */
+.f-uploader{
+  display:flex; align-items:center; gap:6px; margin-top:4px;
+}
+.f-uploader img{
+  width:18px; height:18px; border-radius:50%;
+  border:1px solid var(--line); object-fit:cover;
+}
+.f-uploader-name{font-size:11px;color:#9a8f77;font-family:'Reem Kufi',sans-serif;}
+.f-mine-badge{
+  font-size:10px; font-family:'Reem Kufi',sans-serif;
+  background:var(--gold-pale); color:var(--gold);
+  padding:2px 7px; border-radius:8px;
+  border:1px solid rgba(180,137,43,.2);
+}
+
+/* ── Quiz filter tabs ── */
+.quiz-filter-tabs{
+  display:flex; gap:4px;
+  background:var(--paper-deep); padding:4px; border-radius:20px;
+  border:1px solid var(--line-soft);
+}
+.qf-tab{
+  font-family:'Reem Kufi',sans-serif; font-size:12px;
+  padding:6px 14px; border-radius:16px; border:none;
+  background:transparent; color:var(--ink-soft); cursor:pointer;
+  transition:background .18s,color .18s;
+}
+.qf-tab.active{ background:#fff; color:var(--teal); box-shadow:0 1px 4px rgba(0,0,0,.08); }
+.qf-tab:hover:not(.active){ background:rgba(0,0,0,.04); }
+
+/* ── Visibility toggle ── */
+.visibility-toggle{
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+}
+.vis-btn{
+  font-family:'Reem Kufi',sans-serif; font-size:12.5px;
+  padding:10px 12px; border-radius:var(--r-sm);
+  border:1.5px solid var(--line); background:#fff;
+  color:var(--ink-soft); cursor:pointer; text-align:center;
+  transition:background .18s,border-color .18s,color .18s;
+  line-height:1.5;
+}
+.vis-btn:hover{ border-color:var(--teal); }
+.vis-btn.active{
+  background:var(--teal-light); border-color:var(--teal); color:var(--teal); font-weight:600;
+}
+
+/* ── Quiz card — visibility badge & author ── */
+.quiz-vis-badge{
+  font-family:'Reem Kufi',sans-serif; font-size:10.5px;
+  padding:2px 8px; border-radius:10px; flex-shrink:0;
+}
+.quiz-vis-badge.public{
+  background:rgba(15,61,59,.1); color:var(--teal); border:1px solid rgba(15,61,59,.2);
+}
+.quiz-vis-badge.private{
+  background:var(--gold-pale); color:var(--gold); border:1px solid rgba(180,137,43,.2);
+}
+.quiz-author{
+  display:flex; align-items:center; gap:6px; margin-top:8px;
+  padding-top:8px; border-top:1px solid var(--line-soft);
+}
+.quiz-author img{
+  width:20px; height:20px; border-radius:50%;
+  border:1px solid var(--line); object-fit:cover;
+}
+.quiz-author-name{ font-size:11.5px; color:#9a8f77; font-family:'Reem Kufi',sans-serif; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--paper-deep);border-radius:6px;}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px;}
+::-webkit-scrollbar-thumb:hover{background:var(--gold);}
+
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-shine"></div>
+  <div class="eyebrow">استماع · تلاوة · مراجعة</div>
+  <h1>القرآن الكريم</h1>
+  <p class="sub">اختر القارئ والسورة وتابع الآية وهي تُتلى أمامك</p>
+
+  <!-- زر تسجيل الدخول -->
+  <div class="auth-bar" id="authBar">
+    <!-- حالة: غير مسجل -->
+    <button class="auth-signin-btn" id="signInBtn">
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+        <path fill="#FFF" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.9 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
+      </svg>
+      تسجيل الدخول بجوجل
+    </button>
+    <!-- حالة: مسجل -->
+    <div class="auth-user" id="authUser" style="display:none">
+      <img class="auth-avatar" id="authAvatar" src="" alt="صورة المستخدم" width="32" height="32">
+      <span class="auth-name" id="authName"></span>
+      <button class="auth-signout-btn" id="signOutBtn">خروج</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-page="listen">الاستماع</button>
+    <button class="tab-btn" data-page="docs">المستندات</button>
+    <button class="tab-btn" data-page="quiz">الاختبارات</button>
+  </div>
+</header>
+
+<!-- ══════════════════════════════
+     صفحة الاستماع
+══════════════════════════════ -->
+<div id="page-listen" class="page active">
+
+  <div class="controls-wrap">
+    <div class="controls">
+      <div class="field">
+        <label for="reciterSelect"><span class="field-icon">🎙</span> القارئ</label>
+        <select id="reciterSelect"></select>
+      </div>
+      <div class="field">
+        <label for="surahSelect"><span class="field-icon">📖</span> السورة</label>
+        <select id="surahSelect"></select>
+      </div>
+      <div class="field">
+        <label for="repeatSelect"><span class="field-icon">🔁</span> تكرار الآية</label>
+        <select id="repeatSelect">
+          <option value="1">بدون تكرار</option>
+          <option value="2">مرتين</option>
+          <option value="3">ثلاث مرات</option>
+          <option value="5">خمس مرات</option>
+          <option value="10">عشر مرات</option>
+          <option value="infinite">تكرار مستمر</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="player">
+    <div class="player-inner">
+      <div class="player-progress-bar" id="playerProgressBar"></div>
+      <div class="transport">
+        <button id="prevBtn" title="الآية السابقة" aria-label="الآية السابقة">❯</button>
+        <button id="playBtn" class="play" title="تشغيل" aria-label="تشغيل">▶</button>
+        <button id="nextBtn" title="الآية التالية" aria-label="الآية التالية">❮</button>
+      </div>
+      <div class="now-playing">
+        <strong id="npSurah">اختر سورة للبدء</strong>
+        <span id="npAyah">—</span>
+      </div>
+      <div class="player-actions">
+        <a id="dlCurrent" class="dl-btn" href="#" download>⭳ تنزيل الآية</a>
+        <button id="dlSurahBtn" class="dl-btn">⭳ تنزيل السورة (WAV)</button>
+        <span class="status-msg" id="statusMsg"></span>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <div class="mushaf">
+      <div class="mushaf-inner">
+        <div id="surahHeader"></div>
+        <div id="quranText" class="quran-text">
+          <div class="loading">جارٍ تحميل السور…</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ══════════════════════════════
+     صفحة المستندات
+══════════════════════════════ -->
+<div id="page-docs" class="page">
+  <div class="section-wrap">
+
+    <!-- تنزيل السورة الحالية -->
+    <div class="section-card">
+      <div class="section-head">
+        <div>
+          <h2>تنزيل تلاوة السورة الحالية</h2>
+          <div class="desc">نزّل السورة كاملة دفعة واحدة، أو اختر آية بعينها</div>
+        </div>
+        <span class="badge" id="saReciterName"></span>
+      </div>
+      <div class="section-body">
+        <div class="dl-panel-head">
+          <strong id="saSurahName">اختر سورة من صفحة الاستماع أولاً</strong>
+          <button id="dlSurahDocs" class="dl-surah-btn" style="display:none">
+            ⭳ تنزيل السورة — ملف صوتي واحد
+          </button>
+        </div>
+        <div class="dl-progress-wrap" id="dlDocsProgress">
+          <div class="dl-progress-bar"><div class="dl-progress-fill" id="dlDocsProgressFill"></div></div>
+          <div class="dl-progress-label" id="dlDocsProgressLabel"></div>
+        </div>
+        <div id="noSurahNote" class="no-surah-note">اذهب إلى تبويب الاستماع واختر سورة أولاً</div>
+        <div id="ayahDlWrap" style="display:none">
+          <div class="dl-divider">أو نزّل آية بعينها</div>
+          <div class="ayah-dl-list" id="ayahDlList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- مصادر + الملفات المرفوعة -->
+    <div class="section-card">
+      <div class="section-head">
+        <div>
+          <h2>مصادر جاهزة للتحميل</h2>
+          <div class="desc">ملفات ثابتة وملفات رفعها المستخدمون — تظهر لجميع الزوار</div>
+        </div>
+        <span class="badge green" id="filesCountBadge" style="display:none"></span>
+      </div>
+      <div class="section-body">
+        <div class="resource-grid" id="resourceGrid">
+          <!-- المصادر الثابتة -->
+          <div class="resource-card">
+            <div class="r-thumb r-thumb--icon">📖</div>
+            <div class="r-card-body">
+              <div class="r-title">المصحف الشريف كاملاً (PDF)</div>
+              <div class="r-desc">نسخة كاملة برواية حفص عن عاصم، مصدرها مجمع الملك فهد — نحو 70 ميجابايت.</div>
+            </div>
+            <div class="r-card-foot">
+              <a href="https://www.quran-pdf.com/arabic-quran.pdf" target="_blank" rel="noopener">⭳ تنزيل PDF</a>
+            </div>
+          </div>
+          <div class="resource-card">
+            <div class="r-thumb r-thumb--icon">📝</div>
+            <div class="r-card-body">
+              <div class="r-title">نص القرآن بصيغ متعددة</div>
+              <div class="r-desc">نصوص القرآن (عثماني، مبسّط) بصيغ TXT وXML وJSON من مشروع Tanzil.</div>
+            </div>
+            <div class="r-card-foot">
+              <a href="https://tanzil.net/download/" target="_blank" rel="noopener">فتح صفحة التحميل</a>
+            </div>
+          </div>
+          <div class="resource-card">
+            <div class="r-thumb r-thumb--icon">🌐</div>
+            <div class="r-card-body">
+              <div class="r-title">ترجمات معاني القرآن</div>
+              <div class="r-desc">ترجمات معتمدة لمعاني القرآن بعشرات اللغات من مشروع Tanzil.</div>
+            </div>
+            <div class="r-card-foot">
+              <a href="https://tanzil.net/trans/" target="_blank" rel="noopener">فتح صفحة الترجمات</a>
+            </div>
+          </div>
+          <!-- الملفات المرفوعة تُضاف هنا بالـ JS -->
+        </div>
+
+        <!-- منطقة الرفع -->
+        <div class="upload-divider">
+          <span>أضف ملفاتك</span>
+        </div>
+
+        <!-- تنبيه تسجيل الدخول -->
+        <div class="auth-gate" id="uploadAuthGate">
+          <div class="auth-gate-icon">🔒</div>
+          <p>سجّل دخولك بحساب جوجل لرفع ملفاتك ومشاركتها مع الجميع</p>
+          <button class="auth-signin-btn auth-signin-btn--inline" id="signInBtn2">
+            <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="currentColor" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.9 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
+            </svg>
+            تسجيل الدخول بجوجل
+          </button>
+        </div>
+
+        <!-- منطقة الرفع (تظهر بعد تسجيل الدخول) -->
+        <div id="uploadSection" style="display:none">
+          <div class="upload-box" id="uploadBox">
+            <div class="up-icon">⭱</div>
+            <strong>اسحب الملفات هنا أو اضغط للاختيار</strong>
+            <p>PDF · MP3 · صور · أو أي مستند آخر (حد أقصى 100 ميجابايت للملف)</p>
+            <input type="file" id="fileInput" multiple>
+          </div>
+          <div class="upload-progress-wrap" id="uploadProgressWrap" style="display:none">
+            <div class="upload-progress-bar"><div class="upload-progress-fill" id="uploadProgressFill"></div></div>
+            <div class="upload-progress-label" id="uploadProgressLabel">جارٍ الرفع…</div>
+          </div>
+        </div>
+
+        <!-- قائمة مخفية (للتوافق) -->
+        <div id="filesList" style="display:none">
+          <div id="filesEmpty"></div>
+        </div>
+        <p class="info-note" id="filesNote" style="display:none">
+          ✓ الملفات مخزّنة على السحابة وتظهر لجميع زوار الصفحة
+        </p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     صفحة الاختبارات
+══════════════════════════════ -->
+<div id="page-quiz" class="page">
+  <div class="section-wrap">
+    <div class="section-card">
+      <div class="section-head">
+        <div>
+          <h2>بنك الاختبارات</h2>
+          <div class="desc">أضف أسئلتك — اختر عام ليظهر للجميع أو خاص لك وحدك</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <div class="quiz-filter-tabs" id="quizFilterTabs">
+            <button class="qf-tab active" data-filter="all">الكل</button>
+            <button class="qf-tab" data-filter="public">عام</button>
+            <button class="qf-tab" data-filter="private">خاص</button>
+          </div>
+          <button class="btn btn-primary" id="addQuizBtn">+ إضافة سؤال</button>
+        </div>
+      </div>
+      <div class="section-body">
+        <div id="quizAuthGate" class="auth-gate" style="display:none">
+          <div class="auth-gate-icon">🔒</div>
+          <p>سجّل دخولك لإضافة أسئلة ومشاركتها مع الجميع</p>
+        </div>
+        <div id="quizList" class="quiz-grid">
+          <div class="quiz-empty" id="quizEmpty">
+            <div style="font-size:28px;margin-bottom:8px">📝</div>
+            لم تُضَف أسئلة بعد
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     Modal إضافة سؤال
+══════════════════════════════ -->
+<div class="modal-overlay" id="quizModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <h3 id="modalTitle">إضافة سؤال جديد</h3>
+      <button class="modal-close" id="modalClose" aria-label="إغلاق">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field">
+        <label for="qCategory">الفئة / الوسم (اختياري)</label>
+        <input type="text" id="qCategory" placeholder="مثال: سورة البقرة، التجويد…">
+      </div>
+      <div class="form-field">
+        <label for="qText">نص السؤال *</label>
+        <textarea id="qText" placeholder="اكتب سؤالك هنا…"></textarea>
+      </div>
+      <div class="form-field">
+        <label>الخيارات * — اختر الإجابة الصحيحة</label>
+        <div class="options-list" id="optionsList"></div>
+        <button class="add-option-btn" id="addOptionBtn">+ إضافة خيار</button>
+      </div>
+      <div class="form-field">
+        <label for="qExplain">تفسير / توضيح (اختياري)</label>
+        <textarea id="qExplain" placeholder="اشرح الإجابة الصحيحة…" style="min-height:70px;"></textarea>
+      </div>
+      <!-- خيار الظهور -->
+      <div class="form-field">
+        <label>ظهور السؤال</label>
+        <div class="visibility-toggle" id="visibilityToggle">
+          <button type="button" class="vis-btn active" data-vis="public">
+            🌐 عام — يظهر لجميع الزوار
+          </button>
+          <button type="button" class="vis-btn" data-vis="private">
+            🔒 خاص — يظهر لك فقط
+          </button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
+        <button class="btn btn-danger" id="modalCancelBtn">إلغاء</button>
+        <button class="btn btn-primary" id="saveQuizBtn">حفظ السؤال</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     Modal تفاصيل الملف قبل الرفع
+══════════════════════════════ -->
+<div class="modal-overlay" id="fileDetailModal">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>تفاصيل الملف</h3>
+      <button class="modal-close" id="fileDetailClose" aria-label="إغلاق">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- معاينة الملف -->
+      <div class="fd-file-preview" id="fdFilePreview">
+        <div class="fd-file-icon" id="fdFileIcon">📄</div>
+        <div class="fd-file-info">
+          <div class="fd-file-name" id="fdFileName"></div>
+          <div class="fd-file-size" id="fdFileSize"></div>
+        </div>
+      </div>
+
+      <!-- اسم مخصص -->
+      <div class="form-field" style="margin-top:18px;">
+        <label for="fdCustomName">اسم مخصص للملف (اختياري)</label>
+        <input type="text" id="fdCustomName" placeholder="اتركه فارغاً لاستخدام اسم الملف الأصلي">
+      </div>
+
+      <!-- صورة مخصصة -->
+      <div class="form-field">
+        <label>صورة مصغّرة للملف (اختياري)</label>
+        <div class="fd-thumb-area" id="fdThumbArea">
+          <div class="fd-thumb-preview" id="fdThumbPreview" style="display:none">
+            <img id="fdThumbImg" src="" alt="صورة مصغّرة">
+            <button type="button" class="fd-thumb-remove" id="fdThumbRemove">✕</button>
+          </div>
+          <label class="fd-thumb-upload" id="fdThumbUploadLabel" for="fdThumbInput">
+            <span>🖼</span>
+            <span>اختر صورة</span>
+            <input type="file" id="fdThumbInput" accept="image/*" style="display:none">
+          </label>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+        <button class="btn btn-danger" id="fdCancelBtn">إلغاء</button>
+        <button class="btn btn-primary" id="fdUploadBtn">⭱ رفع الملف</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  النصوص عبر alquran.cloud &nbsp;·&nbsp; التلاوات الصوتية عبر everyayah.com
+</footer>
+<audio id="audioPlayer" preload="none"></audio>
+
+<script>
+/* ══════════════════════════════
+   Firebase init — compat API
+══════════════════════════════ */
+const firebaseConfig = {
+  apiKey:            "AIzaSyB5SOzSxA8Iz1NbbpIoEU7UmtzMm_ZlkvI",
+  authDomain:        "quran-page.firebaseapp.com",
+  projectId:         "quran-page",
+  storageBucket:     "quran-page.firebasestorage.app",
+  messagingSenderId: "419766436381",
+  appId:             "1:419766436381:web:30f6b35ca76304e0bafcf4"
+};
+
+firebase.initializeApp(firebaseConfig);
+const _auth     = firebase.auth();
+const _db       = firebase.firestore();
+const _provider = new firebase.auth.GoogleAuthProvider();
+
+/* compat wrappers عشان الكود الموجود يشتغل بدون تعديل */
+const onAuthStateChanged = (auth, cb) => auth.onAuthStateChanged(cb);
+const signInWithPopup    = (auth, prov) => auth.signInWithPopup(prov);
+const signOut            = (auth) => auth.signOut();
+const collection  = (db, col) => db.collection(col);
+const addDoc      = (ref, data) => ref.add(data);
+const getDocs     = (q) => q.get();
+const deleteDoc   = (ref) => ref.delete();
+const doc         = (db, col, id) => db.collection(col).doc(id);
+const updateDoc   = (ref, data) => ref.update(data);
+const query       = (ref, ...constraints) => {
+  let q = ref;
+  constraints.forEach(c => { q = c(q); });
+  return q;
+};
+const orderBy     = (field, dir='asc') => (ref) => ref.orderBy(field, dir);
+
+/* patch getDocs لإرجاع نفس صيغة modular SDK */
+const _getDocs = async (q) => {
+  const snap = await q.get();
+  snap.docs = snap.docs || snap.docs;
+  return snap;
+};
+
+{
+
+/* ══════════════════════════════
+   RECITERS — قائمة موسّعة
+══════════════════════════════ */
+const RECITERS = [
+  /* السعودية */
+  { id:"Alafasy_128kbps",              name:"مشاري راشد العفاسي" },
+  { id:"MaherAlMuaiqly128kbps",        name:"ماهر المعيقلي" },
+  { id:"Saood_ash-Shuraym_128kbps",    name:"سعود الشريم" },
+  { id:"Ghamadi_40kbps",               name:"سعد الغامدي" },
+  { id:"Yasser_Ad-Dussary_128kbps",    name:"ياسر الدوسري" },
+  { id:"Abdullah_Basfar_192kbps",      name:"عبدالله بصفر" },
+  { id:"Abdurrahmaan_As-Sudais_192kbps",name:"عبدالرحمن السديس" },
+  { id:"Nasser_Alqatami_128kbps",      name:"ناصر القطامي" },
+  { id:"Khalid_Abduljaleel_128kbps",   name:"خالد عبد الجليل" },
+  /* مصر */
+  { id:"Abdul_Basit_Murattal_192kbps", name:"عبد الباسط عبد الصمد (مرتل)" },
+  { id:"Abdul_Basit_128kbps",          name:"عبد الباسط عبد الصمد (مجوّد)" },
+  { id:"Husary_128kbps",               name:"محمود خليل الحصري" },
+  { id:"Minshawy_Murattal_128kbps",    name:"محمد صديق المنشاوي (مرتل)" },
+  { id:"Muhammad_Ayyoub_128kbps",      name:"محمد أيوب" },
+  { id:"Mohammad_al_Tablaway_128kbps", name:"محمد الطبلاوي" },
+  /* دول أخرى */
+  { id:"Abu_Bakr_Ash-Shaatri_128kbps", name:"أبو بكر الشاطري (جزائر)" },
+  { id:"Hani_Rifai_192kbps",           name:"هاني الرفاعي" },
+  { id:"Ibrahim_Akhdar_32kbps",        name:"إبراهيم الأخضر" },
+  { id:"Warsh_Hussary_Mujawwad_128kbps",name:"ورش عن نافع (الحصري)" },
+  { id:"Ayman_Sowaid_64kbps",          name:"أيمن سويد" }
+];
+
+const AUDIO_BASE = "https://everyayah.com/data/";
+const API_BASE   = "https://api.alquran.cloud/v1";
+const QUIZ_KEY   = "quran_quiz_v1"; /* محتفظ به للتوافق مع الإجابات القديمة */
+
+/* ── DOM refs ── */
+const reciterSelect  = document.getElementById('reciterSelect');
+const surahSelect    = document.getElementById('surahSelect');
+const repeatSelect   = document.getElementById('repeatSelect');
+const quranText      = document.getElementById('quranText');
+const surahHeader    = document.getElementById('surahHeader');
+const audio          = document.getElementById('audioPlayer');
+const playBtn        = document.getElementById('playBtn');
+const prevBtn        = document.getElementById('prevBtn');
+const nextBtn        = document.getElementById('nextBtn');
+const npSurah        = document.getElementById('npSurah');
+const npAyah         = document.getElementById('npAyah');
+const statusMsg      = document.getElementById('statusMsg');
+const dlCurrent      = document.getElementById('dlCurrent');
+const dlSurahBtn     = document.getElementById('dlSurahBtn');
+const saSurahName    = document.getElementById('saSurahName');
+const saReciterName  = document.getElementById('saReciterName');
+const ayahDlList     = document.getElementById('ayahDlList');
+const dlSurahDocs    = document.getElementById('dlSurahDocs');
+const ayahDlWrap     = document.getElementById('ayahDlWrap');
+const noSurahNote    = document.getElementById('noSurahNote');
+
+let surahList    = [];
+let currentAyahs = [];
+let currentSurahNum = 1;
+let currentIdx   = 0;
+let isPlaying    = false;
+let repeatsDone  = 0;
+
+/* ── Helpers ── */
+const pad3 = n => String(n).padStart(3,'0');
+const setStatus = m => { statusMsg.textContent = m||""; };
+const toArabic = n => String(n).split('').map(d=>('٠١٢٣٤٥٦٧٨٩'[d]??d)).join('');
+const reciterLabel = id => (RECITERS.find(r=>r.id===id)||{name:id}).name;
+
+/* ── Tabs ── */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('page-'+btn.dataset.page).classList.add('active');
+    if(btn.dataset.page==='docs') renderAyahDownloads();
+  });
+});
+
+/* ── Populate reciters ── */
+RECITERS.forEach(r=>{
+  const o=document.createElement('option');
+  o.value=r.id; o.textContent=r.name;
+  reciterSelect.appendChild(o);
+});
+
+/* ── Load surah list ── */
+async function loadSurahList(){
+  try{
+    const data = await fetch(`${API_BASE}/surah`).then(r=>r.json());
+    surahList = data.data;
+    surahList.forEach(s=>{
+      const o=document.createElement('option');
+      o.value=s.number;
+      o.textContent=`${s.number}. ${s.name}`;
+      surahSelect.appendChild(o);
+    });
+    loadSurah(1);
+  }catch{
+    quranText.innerHTML='<div class="empty-note">تعذّر تحميل قائمة السور. تحقّق من الاتصال بالإنترنت.</div>';
+  }
+}
+
+async function loadSurah(number){
+  currentSurahNum=Number(number);
+  currentIdx=0; repeatsDone=0;
+  stopPlayback();
+  quranText.innerHTML='<div class="loading">جارٍ تحميل السورة…</div>';
+  surahHeader.innerHTML="";
+  try{
+    const data = await fetch(`${API_BASE}/surah/${currentSurahNum}/quran-uthmani`).then(r=>r.json());
+    const s = data.data;
+    currentAyahs = s.ayahs;
+    const name = s.name.replace('سورة ','');
+    surahHeader.innerHTML=`
+      <div class="surah-title">
+        <div class="name">سورة ${name}</div>
+        <div class="meta">${s.revelationType==='Meccan'?'مكية':'مدنية'} · ${s.numberOfAyahs} آية</div>
+      </div>
+      ${(currentSurahNum!==1&&currentSurahNum!==9)?'<div class="bismillah">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>':''}`;
+    renderAyahs();
+    npSurah.textContent=`سورة ${name}`;
+    npAyah.textContent=`${s.numberOfAyahs} آية`;
+    updateDlLink();
+    renderAyahDownloads();
+  }catch{
+    quranText.innerHTML='<div class="empty-note">تعذّر تحميل نص السورة. حاول مرة أخرى.</div>';
+  }
+}
+
+function renderAyahs(){
+  quranText.innerHTML="";
+  currentAyahs.forEach((a,i)=>{
+    const span=document.createElement('span');
+    span.className='ayah'; span.id='ayah-'+i; span.tabIndex=0;
+    span.setAttribute('role','button');
+    span.setAttribute('aria-label',`تشغيل الآية ${a.numberInSurah}`);
+    span.innerHTML=`${a.text}<span class="ayah-num">${toArabic(a.numberInSurah)}</span>`;
+    span.addEventListener('click',()=>playAyah(i));
+    span.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();playAyah(i);}});
+    quranText.appendChild(span);
+  });
+}
+
+function audioUrl(idx){
+  const a=currentAyahs[idx];
+  return `${AUDIO_BASE}${reciterSelect.value}/${pad3(currentSurahNum)}${pad3(a.numberInSurah)}.mp3`;
+}
+function highlightAyah(idx){
+  document.querySelectorAll('.ayah.active').forEach(el=>el.classList.remove('active'));
+  const el=document.getElementById('ayah-'+idx);
+  if(el){el.classList.add('active');el.scrollIntoView({behavior:'smooth',block:'center'});}
+  const a=currentAyahs[idx];
+  if(a) npAyah.textContent=`الآية ${toArabic(a.numberInSurah)} من ${toArabic(currentAyahs.length)}`;
+  updateDlLink();
+  /* تحديث progress bar */
+  const pBar = document.getElementById('playerProgressBar');
+  if(pBar && currentAyahs.length>1){
+    pBar.style.width = ((idx/(currentAyahs.length-1))*100)+'%';
+  }
+}
+
+/* تحريك progress bar أثناء تشغيل الآية */
+(function tickProgress(){
+  requestAnimationFrame(tickProgress);
+  const pBar = document.getElementById('playerProgressBar');
+  if(!pBar || !isPlaying || !audio.duration) return;
+  const ayahFrac = currentAyahs.length>1 ? currentIdx/(currentAyahs.length-1) : 0;
+  const withinFrac = audio.currentTime / audio.duration;
+  const step = 1/Math.max(currentAyahs.length,1);
+  pBar.style.width = ((ayahFrac + withinFrac*step)*100)+'%';
+})();function updateDlLink(){
+  if(currentAyahs[currentIdx]){
+    dlCurrent.href=audioUrl(currentIdx);
+    dlCurrent.setAttribute('download',`${pad3(currentSurahNum)}${pad3(currentAyahs[currentIdx].numberInSurah)}.mp3`);
+  }
+}
+function playAyah(idx){
+  if(idx<0||idx>=currentAyahs.length) return;
+  if(idx!==currentIdx) repeatsDone=0;
+  currentIdx=idx;
+  audio.src=audioUrl(idx);
+  setStatus("جارٍ التحميل…");
+  audio.play().then(()=>{
+    isPlaying=true; playBtn.textContent="❚❚"; playBtn.setAttribute('aria-label','إيقاف مؤقت'); setStatus("");
+  }).catch(()=>setStatus("تعذّر تشغيل الصوت"));
+  highlightAyah(idx);
+}
+function stopPlayback(){
+  audio.pause(); audio.removeAttribute('src');
+  isPlaying=false; playBtn.textContent="▶"; playBtn.setAttribute('aria-label','تشغيل');
+}
+
+audio.addEventListener('ended',()=>{
+  const rv=repeatSelect.value;
+  const again=rv==='infinite'||(repeatsDone+1)<Number(rv);
+  if(again){repeatsDone++;playAyah(currentIdx);return;}
+  repeatsDone=0;
+  if(currentIdx<currentAyahs.length-1) playAyah(currentIdx+1);
+  else{
+    isPlaying=false; playBtn.textContent="▶";
+    const next=currentSurahNum<114?currentSurahNum+1:null;
+    if(next){surahSelect.value=next;loadSurah(next);}
+  }
+});
+audio.addEventListener('error',()=>{if(audio.src)setStatus("تعذّر تحميل المقطع");});
+
+playBtn.addEventListener('click',()=>{
+  if(!audio.src){playAyah(0);return;}
+  if(isPlaying){audio.pause();isPlaying=false;playBtn.textContent="▶";}
+  else{audio.play().then(()=>{isPlaying=true;playBtn.textContent="❚❚";}).catch(()=>setStatus("تعذّر التشغيل"));}
+});
+nextBtn.addEventListener('click',()=>{if(currentIdx<currentAyahs.length-1)playAyah(currentIdx+1);});
+prevBtn.addEventListener('click',()=>{if(currentIdx>0)playAyah(currentIdx-1);});
+surahSelect.addEventListener('change',e=>loadSurah(e.target.value));
+reciterSelect.addEventListener('change',()=>{updateDlLink();renderAyahDownloads();if(isPlaying)playAyah(currentIdx);});
+repeatSelect.addEventListener('change',()=>{repeatsDone=0;});
+
+/* ══════════════════════════════
+   تحميل السورة كاملة
+   يجمع روابط MP3 في ملف ZIP باستخدام JSZip CDN
+══════════════════════════════ */
+/* ══════════════════════════════
+   دمج الآيات في ملف صوتي واحد عبر Web Audio API
+══════════════════════════════ */
+/* progressWrap/Fill/Label: عناصر progress bar اختيارية (null = لا يوجد) */
+async function downloadSurahMerged(btnEl, progressWrap, progressFill, progressLabel){
+  if(!currentAyahs.length){ setStatus("اختر سورة أولاً"); return; }
+
+  const origLabel = btnEl.textContent;
+  btnEl.classList.add('loading-zip');
+  if(progressWrap) progressWrap.classList.add('show');
+  setStatus("جارٍ تحميل الآيات…");
+
+  const setProgress = (done, total, phase)=>{
+    const pct = Math.round(done/total*100);
+    btnEl.textContent = `⏳ ${done}/${total}`;
+    if(progressFill)  progressFill.style.width = pct+'%';
+    if(progressLabel) progressLabel.textContent = phase ? phase : `جارٍ التحميل ${pct}%`;
+    setStatus(`${phase||'جارٍ التحميل'} ${done}/${total}`);
+  };
+
+  try{
+    const recId     = reciterSelect.value;
+    const meta      = surahList.find(s=>s.number===currentSurahNum);
+    const surahName = meta ? meta.name.replace('سورة ','') : `surah${pad3(currentSurahNum)}`;
+    const total     = currentAyahs.length;
+    const ctx       = new (window.AudioContext||window.webkitAudioContext)();
+    const buffers   = new Array(total).fill(null);
+    let done = 0;
+
+    /* تحميل بالتوازي مجموعات 4 */
+    const BATCH = 4;
+    for(let i=0; i<total; i+=BATCH){
+      const slice = currentAyahs.slice(i, i+BATCH);
+      await Promise.all(slice.map(async (ayah, bi)=>{
+        const realIdx = i + bi;
+        const url = `${AUDIO_BASE}${recId}/${pad3(currentSurahNum)}${pad3(ayah.numberInSurah)}.mp3`;
+        try{
+          const ab = await fetch(url).then(r=>r.arrayBuffer());
+          buffers[realIdx] = await ctx.decodeAudioData(ab);
+        }catch{ buffers[realIdx] = null; }
+        done++;
+        setProgress(done, total, 'جارٍ التحميل');
+      }));
+    }
+
+    const validBufs = buffers.filter(Boolean);
+    if(!validBufs.length){ setStatus("تعذّر تحميل أي ملف"); return; }
+
+    const sampleRate  = validBufs[0].sampleRate;
+    const channels    = Math.max(...validBufs.map(b=>b.numberOfChannels));
+    const totalFrames = buffers.reduce((s,b)=>s+(b?b.length:0), 0);
+
+    /* دمج في OfflineAudioContext */
+    const offline = new OfflineAudioContext(channels, totalFrames, sampleRate);
+    let offset = 0;
+    for(const buf of buffers){
+      if(!buf){ continue; }
+      const src = offline.createBufferSource();
+      src.buffer = buf;
+      src.connect(offline.destination);
+      src.start(offset / sampleRate);
+      offset += buf.length;
+    }
+
+    if(progressFill)  progressFill.style.width = '100%';
+    if(progressLabel) progressLabel.textContent = 'جارٍ التصيير…';
+    setStatus("جارٍ تصيير الملف الصوتي…");
+    btnEl.textContent = "⏳ تصيير…";
+
+    const rendered = await offline.startRendering();
+    ctx.close();
+
+    /* تحويل AudioBuffer → WAV */
+    if(progressLabel) progressLabel.textContent = 'جارٍ إنشاء الملف…';
+    const wav  = audioBufferToWav(rendered);
+    const blob = new Blob([wav], {type:'audio/wav'});
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = `${surahName}_${reciterLabel(recId)}.wav`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+
+    if(progressLabel) progressLabel.textContent = '✓ تم التنزيل بنجاح';
+    setStatus("✓ تم تنزيل الملف الصوتي");
+    setTimeout(()=>{
+      setStatus("");
+      if(progressWrap) progressWrap.classList.remove('show');
+    }, 3500);
+
+  }catch(err){
+    setStatus("حدث خطأ — " + err.message);
+    if(progressLabel) progressLabel.textContent = "حدث خطأ";
+    console.error(err);
+  }finally{
+    btnEl.classList.remove('loading-zip');
+    btnEl.textContent = origLabel;
+  }
+}
+
+/* تحويل AudioBuffer إلى WAV بدون مكتبة خارجية */
+function audioBufferToWav(buffer){
+  const numCh  = buffer.numberOfChannels;
+  const sr     = buffer.sampleRate;
+  const len    = buffer.length;
+  const bitsPS = 16;
+  const blockAlign = numCh * (bitsPS/8);
+  const byteRate   = sr * blockAlign;
+  const dataSize   = len * blockAlign;
+  const ab = new ArrayBuffer(44 + dataSize);
+  const dv = new DataView(ab);
+
+  /* RIFF header */
+  const str = (off,s)=>{ for(let i=0;i<s.length;i++) dv.setUint8(off+i,s.charCodeAt(i)); };
+  str(0,'RIFF'); dv.setUint32(4,36+dataSize,true);
+  str(8,'WAVE'); str(12,'fmt '); dv.setUint32(16,16,true);
+  dv.setUint16(20,1,true);          // PCM
+  dv.setUint16(22,numCh,true);
+  dv.setUint32(24,sr,true);
+  dv.setUint32(28,byteRate,true);
+  dv.setUint16(32,blockAlign,true);
+  dv.setUint16(34,bitsPS,true);
+  str(36,'data'); dv.setUint32(40,dataSize,true);
+
+  /* interleave channels */
+  const chData = [];
+  for(let c=0;c<numCh;c++) chData.push(buffer.getChannelData(c));
+  let off=44;
+  for(let i=0;i<len;i++){
+    for(let c=0;c<numCh;c++){
+      const s = Math.max(-1,Math.min(1,chData[c][i]));
+      dv.setInt16(off, s<0?s*0x8000:s*0x7FFF, true);
+      off+=2;
+    }
+  }
+  return ab;
+}
+
+dlSurahBtn.addEventListener('click',()=>downloadSurahMerged(dlSurahBtn, null, null, null));
+
+/* ══════════════════════════════
+   صفحة المستندات — تنزيل
+══════════════════════════════ */
+function renderAyahDownloads(){
+  if(!currentAyahs.length){
+    saSurahName.textContent="اختر سورة من صفحة الاستماع أولاً";
+    saReciterName.textContent="";
+    dlSurahDocs.style.display="none";
+    ayahDlWrap.style.display="none";
+    noSurahNote.style.display="block";
+    return;
+  }
+  const meta=surahList.find(s=>s.number===currentSurahNum);
+  saSurahName.textContent=meta?`سورة ${meta.name.replace('سورة ','')}`:'' ;
+  saReciterName.textContent=reciterLabel(reciterSelect.value);
+  noSurahNote.style.display="none";
+  dlSurahDocs.style.display="inline-flex";
+  ayahDlWrap.style.display="block";
+  ayahDlList.innerHTML="";
+  currentAyahs.forEach(ayah=>{
+    const a=document.createElement('a');
+    const url=`${AUDIO_BASE}${reciterSelect.value}/${pad3(currentSurahNum)}${pad3(ayah.numberInSurah)}.mp3`;
+    a.href=url;
+    a.setAttribute('download',`${pad3(currentSurahNum)}${pad3(ayah.numberInSurah)}.mp3`);
+    a.innerHTML=`<span>الآية ${toArabic(ayah.numberInSurah)}</span><span class="ic">⭳</span>`;
+    ayahDlList.appendChild(a);
+  });
+}
+
+dlSurahDocs.addEventListener('click',()=>{
+  const pw=document.getElementById('dlDocsProgress');
+  const pf=document.getElementById('dlDocsProgressFill');
+  const pl=document.getElementById('dlDocsProgressLabel');
+  downloadSurahMerged(dlSurahDocs, pw, pf, pl);
+});
+
+/* ══════════════════════════════
+   Cloudinary + Firestore — مشاركة الملفات مع الجميع
+   Storage: Cloudinary (مجاني)
+   Metadata: Firestore
+══════════════════════════════ */
+/* ══════════════════════════════
+   Supabase — رفع الملفات
+══════════════════════════════ */
+const SUPA_URL    = 'https://kpwljblgirnfwinpwkrs.supabase.co';
+const SUPA_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtwd2xqYmxnaXJuZndpbnB3a3JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2NDU3MjgsImV4cCI6MjEwMjIyMTcyOH0.uaQSFe6RSNepzVRghzVwh-_1MiFTL-fOXbLReqHw4jo';
+const SUPA_BUCKET = 'FILES';
+
+const fmtSize=b=>b<1024?b+' بايت':b<1048576?(b/1024).toFixed(1)+' كيلوبايت':(b/1048576).toFixed(2)+' ميجابايت';
+function iconFor(type,name){
+  if(type.includes('pdf')||name.toLowerCase().endsWith('.pdf')) return 'PDF';
+  if(type.startsWith('audio')) return '♪';
+  if(type.startsWith('image')) return '🖼';
+  if(type.includes('word')) return 'DOC';
+  return '📄';
+}
+
+const uploadBox          = document.getElementById('uploadBox');
+const fileInput          = document.getElementById('fileInput');
+const filesList          = document.getElementById('filesList');
+const filesEmpty         = document.getElementById('filesEmpty');
+const filesCountBadge    = document.getElementById('filesCountBadge');
+const uploadSection      = document.getElementById('uploadSection');
+const uploadAuthGate     = document.getElementById('uploadAuthGate');
+const uploadProgressWrap = document.getElementById('uploadProgressWrap');
+const uploadProgressFill = document.getElementById('uploadProgressFill');
+const uploadProgressLabel= document.getElementById('uploadProgressLabel');
+const filesNote          = document.getElementById('filesNote');
+const signInBtn          = document.getElementById('signInBtn');
+const signInBtn2         = document.getElementById('signInBtn2');
+const signOutBtn         = document.getElementById('signOutBtn');
+const authUser           = document.getElementById('authUser');
+const authAvatar         = document.getElementById('authAvatar');
+const authName_el        = document.getElementById('authName');
+
+let currentUser = null;
+
+/* ── Auth state ── */
+_auth.onAuthStateChanged(user=>{
+  currentUser = user;
+  if(user){
+    signInBtn.style.display      = 'none';
+    authUser.style.display       = 'flex';
+    authAvatar.src               = user.photoURL || '';
+    authAvatar.alt               = user.displayName || '';
+    authName_el.textContent      = user.displayName || user.email;
+    uploadAuthGate.style.display = 'none';
+    uploadSection.style.display  = 'block';
+    filesNote.style.display      = 'block';
+  } else {
+    signInBtn.style.display      = 'inline-flex';
+    authUser.style.display       = 'none';
+    uploadAuthGate.style.display = 'block';
+    uploadSection.style.display  = 'none';
+    filesNote.style.display      = 'none';
+  }
+  loadCloudFiles();
+});
+
+const doSignIn = ()=> _auth.signInWithPopup(_provider)
+  .catch(e=>alert('تعذّر تسجيل الدخول: '+e.message));
+signInBtn.addEventListener('click',  doSignIn);
+signInBtn2.addEventListener('click', doSignIn);
+signOutBtn.addEventListener('click', ()=> _auth.signOut());
+
+/* ── Upload via Supabase ── */
+uploadBox.addEventListener('click',   ()=> fileInput.click());
+uploadBox.addEventListener('dragover', e=>{ e.preventDefault(); uploadBox.classList.add('drag'); });
+uploadBox.addEventListener('dragleave', ()=> uploadBox.classList.remove('drag'));
+uploadBox.addEventListener('drop',    e=>{ e.preventDefault(); uploadBox.classList.remove('drag'); openFileDetailModal(e.dataTransfer.files); });
+fileInput.addEventListener('change',  ()=> openFileDetailModal(fileInput.files));
+
+/* ── File Detail Modal logic ── */
+const fileDetailModal   = document.getElementById('fileDetailModal');
+const fdFileIcon        = document.getElementById('fdFileIcon');
+const fdFileName        = document.getElementById('fdFileName');
+const fdFileSize        = document.getElementById('fdFileSize');
+const fdCustomName      = document.getElementById('fdCustomName');
+const fdThumbInput      = document.getElementById('fdThumbInput');
+const fdThumbImg        = document.getElementById('fdThumbImg');
+const fdThumbPreview    = document.getElementById('fdThumbPreview');
+const fdThumbUploadLbl  = document.getElementById('fdThumbUploadLabel');
+const fdThumbRemove     = document.getElementById('fdThumbRemove');
+const fdUploadBtn       = document.getElementById('fdUploadBtn');
+const fdCancelBtn       = document.getElementById('fdCancelBtn');
+const fdDetailClose     = document.getElementById('fileDetailClose');
+
+let pendingFiles   = [];
+let pendingFileIdx = 0;
+let thumbDataUrl   = null;
+let thumbFile      = null;
+
+function openFileDetailModal(fileList){
+  pendingFiles   = Array.from(fileList);
+  pendingFileIdx = 0;
+  fileInput.value = '';
+  showFileInModal(0);
+}
+
+function showFileInModal(idx){
+  if(idx >= pendingFiles.length) return;
+  const f = pendingFiles[idx];
+  fdFileIcon.textContent = iconFor(f.type, f.name);
+  fdFileName.textContent = f.name;
+  fdFileSize.textContent = fmtSize(f.size);
+  fdCustomName.value     = '';
+  thumbDataUrl = null; thumbFile = null;
+  fdThumbImg.src = '';
+  fdThumbPreview.style.display  = 'none';
+  fdThumbUploadLbl.style.display= 'flex';
+  fileDetailModal.classList.add('open');
+  fdCustomName.focus();
+}
+
+fdThumbInput.addEventListener('change', ()=>{
+  const f = fdThumbInput.files[0];
+  if(!f) return;
+  thumbFile = f;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    thumbDataUrl           = e.target.result;
+    fdThumbImg.src         = thumbDataUrl;
+    fdThumbPreview.style.display  = 'block';
+    fdThumbUploadLbl.style.display= 'none';
+  };
+  reader.readAsDataURL(f);
+  fdThumbInput.value = '';
+});
+
+fdThumbRemove.addEventListener('click', ()=>{
+  thumbDataUrl = null; thumbFile = null;
+  fdThumbImg.src = '';
+  fdThumbPreview.style.display  = 'none';
+  fdThumbUploadLbl.style.display= 'flex';
+});
+
+const closeFileDetailModal = ()=> fileDetailModal.classList.remove('open');
+fdDetailClose.addEventListener('click',  closeFileDetailModal);
+fdCancelBtn.addEventListener('click',    closeFileDetailModal);
+fileDetailModal.addEventListener('click', e=>{ if(e.target===fileDetailModal) closeFileDetailModal(); });
+
+fdUploadBtn.addEventListener('click', async()=>{
+  const file       = pendingFiles[pendingFileIdx];
+  const customName = fdCustomName.value.trim() || file.name;
+  closeFileDetailModal();
+  await uploadSingleFile(file, customName, thumbDataUrl);
+  pendingFileIdx++;
+  if(pendingFileIdx < pendingFiles.length){
+    setTimeout(()=> showFileInModal(pendingFileIdx), 400);
+  } else {
+    loadCloudFiles();
+  }
+});
+
+/* تصغير الصورة وتحويلها لـ base64 صغير */
+function resizeImageToBase64(file, maxW, maxH){
+  return new Promise((res,rej)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      URL.revokeObjectURL(url);
+      let w=img.width, h=img.height;
+      if(w>maxW){ h=Math.round(h*maxW/w); w=maxW; }
+      if(h>maxH){ w=Math.round(w*maxH/h); h=maxH; }
+      const canvas = document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      res(canvas.toDataURL('image/jpeg', 0.7));
+    };
+    img.onerror = rej;
+    img.src = url;
+  });
+}
+
+async function uploadSingleFile(file, displayName, thumbUrl){
+  const MAX = 100 * 1024 * 1024;
+  if(file.size > MAX){ alert(`الملف يتجاوز 100 ميجابايت`); return; }
+
+  uploadProgressWrap.style.display = 'block';
+  uploadProgressFill.style.width   = '0%';
+  uploadProgressLabel.textContent  = `جارٍ رفع: ${displayName}`;
+
+  try{
+    /* رفع الملف الأصلي */
+    const safeName  = `${Date.now()}_${file.name.replace(/\s+/g,'_')}`;
+    const uploadUrl = `${SUPA_URL}/storage/v1/object/${SUPA_BUCKET}/${safeName}`;
+
+    await new Promise((res,rej)=>{
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', uploadUrl);
+      xhr.setRequestHeader('Authorization', `Bearer ${SUPA_KEY}`);
+      xhr.setRequestHeader('x-upsert', 'true');
+      xhr.upload.onprogress = e=>{
+        if(e.lengthComputable){
+          const pct = Math.round(e.loaded/e.total*100);
+          uploadProgressFill.style.width  = pct+'%';
+          uploadProgressLabel.textContent = `${displayName} — ${pct}%`;
+        }
+      };
+      xhr.onload = ()=>{ (xhr.status===200||xhr.status===201) ? res() : rej(new Error(`[${xhr.status}] ${xhr.responseText}`)); };
+      xhr.onerror = ()=> rej(new Error('فشل الاتصال'));
+      xhr.send(file);
+    });
+
+    const publicUrl = `${SUPA_URL}/storage/v1/object/public/${SUPA_BUCKET}/${safeName}`;
+
+    /* رفع الصورة المصغّرة — تصغير وتحويل لـ base64 مضغوط */
+    let thumbUrl2 = '';
+    if(thumbFile){
+      try{
+        thumbUrl2 = await resizeImageToBase64(thumbFile, 200, 200);
+      }catch{ thumbUrl2 = ''; }
+    }
+
+    /* حفظ في Firestore — الصورة كـ base64 مضغوط */
+    await _db.collection('sharedFiles').add({
+      name:        displayName,
+      originalName:file.name,
+      size:        file.size,
+      type:        file.type||'application/octet-stream',
+      url:         publicUrl,
+      publicId:    safeName,
+      thumbUrl:    thumbUrl2.length < 900000 ? thumbUrl2 : '',
+      uploadedAt:  Date.now(),
+      uid:         currentUser.uid,
+      userName:    currentUser.displayName||currentUser.email,
+      userPhoto:   currentUser.photoURL||''
+    });
+
+    uploadProgressFill.style.width  = '100%';
+    uploadProgressLabel.textContent = `✓ تم رفع: ${displayName}`;
+    setTimeout(()=>{ uploadProgressWrap.style.display='none'; }, 2000);
+
+  }catch(err){
+    uploadProgressLabel.textContent = `✗ فشل: ${err.message}`;
+    console.error(err);
+    setTimeout(()=>{ uploadProgressWrap.style.display='none'; }, 3000);
+  }
+}
+
+/* ── Load files from Firestore — يضيفها كـ cards في resource-grid ── */
+async function loadCloudFiles(){
+  const grid = document.getElementById('resourceGrid');
+  /* احذف الكاردات القديمة للمستخدمين فقط (مش الـ 3 الثابتة) */
+  grid.querySelectorAll('.resource-card.user-card').forEach(c=>c.remove());
+
+  try{
+    const snap = await _db.collection('sharedFiles').orderBy('uploadedAt','desc').get();
+    const docs = snap.docs.map(d=>({id:d.id,...d.data()}));
+
+    const badge = document.getElementById('filesCountBadge');
+    if(docs.length){
+      badge.textContent   = `${docs.length} ملف مرفوع`;
+      badge.style.display = 'inline';
+    } else {
+      badge.style.display = 'none';
+    }
+
+    docs.forEach(f=>{
+      const isMine = currentUser && f.uid === currentUser.uid;
+      const card   = document.createElement('div');
+      card.className = 'resource-card user-card';
+
+      /* صورة مصغّرة أو أيقونة */
+      const thumbHtml = f.thumbUrl
+        ? `<div class="r-thumb"><img src="${f.thumbUrl}" alt="${f.name}" onerror="this.parentElement.innerHTML='${iconFor(f.type||'',f.name)}'"></div>`
+        : `<div class="r-thumb r-thumb--user">${iconFor(f.type||'',f.name)}</div>`;
+
+      card.innerHTML = `
+        ${thumbHtml}
+        <div class="r-card-body">
+          <div class="r-title">${f.name}</div>
+          <div class="r-desc">${fmtSize(f.size)}</div>
+          <div class="r-meta">
+            ${f.userPhoto?`<img src="${f.userPhoto}" alt="${f.userName}" onerror="this.style.display='none'">`:''}
+            <span>${f.userName}</span>
+            ${isMine?'<span class="r-user-badge">ملفي</span>':''}
+          </div>
+        </div>
+        <div class="r-card-foot">
+          <a href="${f.url}" target="_blank" rel="noopener">⭳ فتح / تنزيل</a>
+          ${isMine?`<button type="button" class="r-del-btn" data-id="${f.id}" data-pid="${f.publicId||''}">✕</button>`:''}
+        </div>`;
+
+      grid.appendChild(card);
+    });
+
+    grid.querySelectorAll('.r-del-btn').forEach(btn=>{
+      btn.addEventListener('click', async()=>{
+        if(!confirm('حذف هذا الملف للجميع؟')) return;
+        await deleteCloudFile(btn.dataset.id, btn.dataset.pid);
+        loadCloudFiles();
+      });
+    });
+
+  }catch(err){
+    console.error('loadCloudFiles:', err);
+  }
+}
+
+async function deleteCloudFile(docId, publicId){
+  try{
+    await _db.collection('sharedFiles').doc(docId).delete();
+    /* حذف من Supabase Storage */
+    if(publicId){
+      await fetch(`${SUPA_URL}/storage/v1/object/${SUPA_BUCKET}/${publicId}`,{
+        method:'DELETE',
+        headers:{ 'Authorization':`Bearer ${SUPA_KEY}` }
+      });
+    }
+  }catch(err){ alert('تعذّر الحذف: '+err.message); }
+}
+
+/* تحميل الملفات فوراً لجميع الزوار */
+loadCloudFiles();
+
+/* ══════════════════════════════
+   نظام الاختبارات — Firestore
+   عام: يظهر للجميع | خاص: للمستخدم فقط
+══════════════════════════════ */
+const LOCAL_ANSWERS_KEY = 'quran_quiz_answers_v1'; // الإجابات محلية فقط
+let localAnswers = {};
+try{ localAnswers = JSON.parse(localStorage.getItem(LOCAL_ANSWERS_KEY)||'{}'); }catch{}
+const saveLocalAnswers = ()=> localStorage.setItem(LOCAL_ANSWERS_KEY, JSON.stringify(localAnswers));
+
+let quizFilter   = 'all'; // all | public | private
+let quizAllData  = [];    // كل الأسئلة المحملة
+
+const quizList    = document.getElementById('quizList');
+const quizEmpty   = document.getElementById('quizEmpty');
+const quizAuthGate= document.getElementById('quizAuthGate');
+const addQuizBtn  = document.getElementById('addQuizBtn');
+const quizModal   = document.getElementById('quizModal');
+const modalClose  = document.getElementById('modalClose');
+const modalCancel = document.getElementById('modalCancelBtn');
+const saveQuizBtn = document.getElementById('saveQuizBtn');
+const optionsList = document.getElementById('optionsList');
+const addOptBtn   = document.getElementById('addOptionBtn');
+let editingId = null;
+let selectedVis  = 'public';
+
+/* filter tabs */
+document.querySelectorAll('.qf-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.qf-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    quizFilter = tab.dataset.filter;
+    renderQuiz();
+  });
+});
+
+/* open/close modal */
+function openModal(q=null){
+  editingId   = q ? q.id : null;
+  selectedVis = q ? (q.visibility||'public') : 'public';
+  document.getElementById('modalTitle').textContent = q?'تعديل السؤال':'إضافة سؤال جديد';
+  document.getElementById('qText').value     = q ? q.question    : '';
+  document.getElementById('qCategory').value = q ? (q.category||''):'';
+  document.getElementById('qExplain').value  = q ? (q.explain||'') :'';
+  optionsList.innerHTML = '';
+  const opts = q ? q.options : ['','','',''];
+  const corr = q ? q.correct : 0;
+  opts.forEach((t,i)=>addOptionRow(t, i===corr));
+  /* visibility buttons */
+  document.querySelectorAll('.vis-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.vis===selectedVis);
+  });
+  quizModal.classList.add('open');
+  document.getElementById('qText').focus();
+}
+const closeModal = ()=> quizModal.classList.remove('open');
+
+document.querySelectorAll('.vis-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    selectedVis = b.dataset.vis;
+    document.querySelectorAll('.vis-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+  });
+});
+
+addQuizBtn.addEventListener('click',()=>{
+  if(!currentUser){ alert('سجّل دخولك أولاً لإضافة سؤال'); return; }
+  openModal();
+});
+modalClose.addEventListener('click',  closeModal);
+modalCancel.addEventListener('click', closeModal);
+quizModal.addEventListener('click', e=>{ if(e.target===quizModal) closeModal(); });
+document.addEventListener('keydown',  e=>{ if(e.key==='Escape') closeModal(); });
+
+function addOptionRow(text='', correct=false){
+  const idx = optionsList.children.length;
+  const L   = ['أ','ب','ج','د','هـ','و'];
+  const div = document.createElement('div');
+  div.className = 'option-row';
+  div.innerHTML = `
+    <input type="text" value="${text.replace(/"/g,'&quot;')}" placeholder="الخيار ${L[idx]||idx+1}" style="flex:1;">
+    <label class="option-correct${correct?' selected':''}">
+      <input type="radio" name="correct_opt" value="${idx}" ${correct?'checked':''}>
+      ✓ صحيح
+    </label>`;
+  div.querySelector('input[type=radio]').addEventListener('change',()=>{
+    document.querySelectorAll('.option-correct').forEach(l=>l.classList.remove('selected'));
+    div.querySelector('.option-correct').classList.add('selected');
+  });
+  optionsList.appendChild(div);
+}
+addOptBtn.addEventListener('click',()=>{ if(optionsList.children.length<6) addOptionRow(); });
+
+/* save to Firestore */
+saveQuizBtn.addEventListener('click', async ()=>{
+  const qText = document.getElementById('qText').value.trim();
+  if(!qText){ document.getElementById('qText').focus(); return; }
+  const rows   = Array.from(optionsList.children);
+  const options= rows.map(r=>r.querySelector('input[type=text]').value.trim());
+  if(options.filter(Boolean).length<2){ alert('أضف خيارين على الأقل'); return; }
+  const cr     = optionsList.querySelector('input[type=radio]:checked');
+  const correct= cr ? Number(cr.value) : 0;
+
+  const data = {
+    question:   qText,
+    category:   document.getElementById('qCategory').value.trim(),
+    options, correct,
+    explain:    document.getElementById('qExplain').value.trim(),
+    visibility: selectedVis,           // 'public' | 'private'
+    uid:        currentUser.uid,
+    userName:   currentUser.displayName || currentUser.email,
+    userPhoto:  currentUser.photoURL || '',
+    createdAt:  Date.now()
+  };
+
+  try{
+    saveQuizBtn.textContent = '⏳ جارٍ الحفظ…';
+    saveQuizBtn.disabled    = true;
+    if(editingId){
+      await _db.collection('quizQuestions').doc(editingId).update(data);
+    } else {
+      await _db.collection('quizQuestions').add(data);
+    }
+    closeModal();
+    await loadQuizFromFirestore();
+  }catch(err){
+    alert('تعذّر الحفظ: '+err.message);
+    console.error(err);
+  }finally{
+    saveQuizBtn.textContent = 'حفظ السؤال';
+    saveQuizBtn.disabled    = false;
+  }
+});
+
+/* load from Firestore */
+async function loadQuizFromFirestore(){
+  try{
+    const snap = await _db.collection('quizQuestions').orderBy('createdAt','desc').get();
+    quizAllData = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderQuiz();
+  }catch(err){
+    quizList.innerHTML=`<div class="quiz-empty">تعذّر تحميل الأسئلة — ${err.message}</div>`;
+    console.error(err);
+  }
+}
+
+function renderQuiz(){
+  quizList.innerHTML = '';
+
+  /* فلترة: عام للجميع + الخاص للمستخدم الحالي فقط */
+  let visible = quizAllData.filter(q=>{
+    if(q.visibility==='private'){
+      return currentUser && q.uid===currentUser.uid;
+    }
+    return true; // public
+  });
+
+  if(quizFilter==='public')  visible = visible.filter(q=>q.visibility==='public');
+  if(quizFilter==='private') visible = visible.filter(q=>q.visibility==='private');
+
+  if(!visible.length){ quizList.appendChild(quizEmpty); return; }
+
+  const L = ['أ','ب','ج','د','هـ','و'];
+  visible.forEach((q,qi)=>{
+    const isMine   = currentUser && q.uid===currentUser.uid;
+    const answered = localAnswers[q.id] ?? null;
+    const card     = document.createElement('div');
+    card.className = 'quiz-card';
+    card.innerHTML = `
+      <div class="quiz-card-head">
+        <div style="flex:1">
+          <div class="quiz-q">${qi+1}. ${q.question}</div>
+          <div class="quiz-author">
+            ${q.userPhoto?`<img src="${q.userPhoto}" alt="${q.userName}" onerror="this.style.display='none'">`:''}
+            <span class="quiz-author-name">${q.userName||'مجهول'}</span>
+            <span class="quiz-vis-badge ${q.visibility==='public'?'public':'private'}">
+              ${q.visibility==='public'?'🌐 عام':'🔒 خاص'}
+            </span>
+          </div>
+        </div>
+        ${q.category?`<span class="quiz-badge">${q.category}</span>`:''}
+      </div>
+      <div class="quiz-options" id="qopts-${q.id}"></div>
+      <div class="quiz-result"  id="qres-${q.id}"></div>
+      <div class="quiz-card-foot">
+        <button class="btn btn-sm btn-gold" data-reset="${q.id}">↺ إعادة</button>
+        ${isMine?`<button class="btn btn-sm btn-primary" data-edit="${q.id}">✎ تعديل</button>`:''}
+        ${isMine?`<button class="btn btn-sm btn-danger"  data-del="${q.id}">✕ حذف</button>`:''}
+      </div>`;
+
+    const optsDiv = card.querySelector(`#qopts-${q.id}`);
+    q.options.forEach((opt,oi)=>{
+      if(!opt) return;
+      const btn = document.createElement('div');
+      btn.className = 'quiz-opt'; btn.tabIndex=0; btn.setAttribute('role','button');
+      btn.innerHTML = `<span class="opt-letter">${L[oi]||oi+1}</span><span>${opt}</span>`;
+      if(answered!==null){
+        if(oi===q.correct)      btn.classList.add('correct');
+        else if(oi===answered)  btn.classList.add('wrong');
+      }
+      btn.addEventListener('click',  ()=> answerQuiz(q, oi));
+      btn.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); answerQuiz(q,oi); }});
+      optsDiv.appendChild(btn);
+    });
+
+    if(answered!==null) showResult(q, answered);
+    quizList.appendChild(card);
+  });
+
+  /* إعادة */
+  quizList.querySelectorAll('[data-reset]').forEach(b=> b.addEventListener('click',()=>{
+    delete localAnswers[b.dataset.reset];
+    saveLocalAnswers(); renderQuiz();
+  }));
+  /* تعديل */
+  quizList.querySelectorAll('[data-edit]').forEach(b=> b.addEventListener('click',()=>{
+    openModal(quizAllData.find(x=>x.id===b.dataset.edit));
+  }));
+  /* حذف */
+  quizList.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', async()=>{
+    if(!confirm('حذف هذا السؤال للجميع؟')) return;
+    try{
+      await _db.collection('quizQuestions').doc(b.dataset.del).delete();
+      delete localAnswers[b.dataset.del];
+      saveLocalAnswers();
+      await loadQuizFromFirestore();
+    }catch(err){ alert('تعذّر الحذف: '+err.message); }
+  }));
+}
+
+function answerQuiz(q, chosen){
+  if(localAnswers[q.id]!==undefined) return;
+  localAnswers[q.id] = chosen;
+  saveLocalAnswers();
+  renderQuiz();
+}
+
+function showResult(q, answered){
+  const el = document.getElementById(`qres-${q.id}`);
+  if(!el) return;
+  const ok = answered===q.correct;
+  el.classList.add('show', ok?'ok':'fail');
+  el.textContent = ok
+    ? `✓ إجابة صحيحة!${q.explain?' — '+q.explain:''}`
+    : `✗ الصواب: ${q.options[q.correct]}${q.explain?' — '+q.explain:''}`;
+}
+
+/* تحميل الأسئلة فوراً لجميع الزوار */
+loadQuizFromFirestore();
+
+/* ── Boot ── */
+loadSurahList();
+
+} // end block
+</script>
+</body>
+</html>
